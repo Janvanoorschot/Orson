@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import functools
+import datetime
+import argparse
+import pika
+import orson
+
+modpath = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+os.chdir(modpath)
+sys.path.append(modpath)
+ticks_per_second = 1
+milliseconds_delta = datetime.timedelta(milliseconds=(1000/ticks_per_second))
+
+
+def timer(connection: pika.BlockingConnection):
+    print('timer')
+    # we want to do something (the bubble.timer(now)) call and then have the
+    # next timer-tick to be at the correct time.
+    now = datetime.datetime.now()
+    next_ping = (now + milliseconds_delta)
+    sleep_seconds = (next_ping - datetime.datetime.now())/datetime.timedelta(seconds=1)
+    if sleep_seconds > 0:
+        connection.call_later(sleep_seconds, functools.partial(timer, connection))
+    else:
+        connection.call_later(0, functools.partial(timer, connection))
+
+
+# def on_message(channel, method_frame, header_frame, body):
+def on_message(channel, method_frame, *_, body):
+    print(method_frame.delivery_tag)
+    print(body)
+    print()
+    channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+
+
+def main(args: argparse.Namespace):
+    # prepare pika
+    parameters = pika.URLParameters(args.pikaurl)
+    connection = pika.BlockingConnection(parameters)
+    orson.connection = connection
+    channel = connection.channel()
+    channel.basic_qos(prefetch_count=1)
+    queuename = 'test'
+    channel.queue_declare(queue=queuename)
+    channel.basic_consume(queuename, on_message)
+
+    # Start pika-based timer
+    now = datetime.datetime.now()
+    delta = datetime.timedelta(seconds=1)
+    next_second = (now + delta).replace(microsecond=0)
+    wait_seconds = (next_second - now)
+    connection.call_later(wait_seconds/datetime.timedelta(seconds=1), functools.partial(timer, connection))
+
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        channel.stop_consuming()
+
+    connection.close()
+
+
+if __name__ == "__main__":
+    # get commandline parameters
+    parser = argparse.ArgumentParser(description='Execute a Robomind Academy Python script.')
+    parser.add_argument('--pikaurl', type=str, default='amqp://orson:orson@localhost:8001/%2F', help='rabbitmq url')
+    main(parser.parse_args())
+

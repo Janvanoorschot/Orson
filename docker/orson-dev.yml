@@ -1,0 +1,15 @@
+# orson
+version: '2.4'
+
+services:
+
+  bjrabbitmq:
+    image: orson/rabbitmq:1.0
+    restart: always
+    ports:
+      - 8001:5672
+      - 8003:15672
+    environment:
+      - RABBITMQ_DEFAULT_PASS=orson
+      - RABBITMQ_DEFAULT_USER=orson
+      - PIKA_URL="amqp://orson:orson@localhost:8001/%2F"

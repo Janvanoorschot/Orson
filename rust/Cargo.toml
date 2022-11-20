@@ -1,0 +1,19 @@
+[package]
+name = "orson"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+amiquip = "0.4"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bin]]
+name = "consumer"
+path = "src/consumer.rs"
+
+[[bin]]
+name = "producer"
+path = "src/producer.rs"

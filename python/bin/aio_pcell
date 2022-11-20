@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+
+import asyncio
+import logging
+import aio_pika
+
+import datetime
+import argparse
+
+modpath = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+os.chdir(modpath)
+sys.path.append(modpath)
+ticks_per_second = 1
+milliseconds_delta = datetime.timedelta(milliseconds=(1000/ticks_per_second))
+
+
+async def on_message(message: aio_pika.abc.AbstractIncomingMessage):
+    async with message.process():
+        print(message.body)
+        await asyncio.sleep(1)
+
+
+async def main(args: argparse.Namespace):
+    logging.basicConfig(level=logging.INFO)
+
+    # prepare pika
+    connection = await aio_pika.connect_robust(args.pikaurl)
+    queuename = 'test'
+    channel = await connection.channel()
+    await channel.set_qos(prefetch_count=10)  # max 10 messages in advance
+    queue = await channel.declare_queue(queuename, auto_delete=False)
+    await queue.consume(on_message)
+
+    try:
+        # Wait until terminate
+        await asyncio.Future()
+    finally:
+        await connection.close()
+
+
+if __name__ == "__main__":
+    # get commandline parameters
+    parser = argparse.ArgumentParser(description='Execute a Robomind Academy Python script.')
+    parser.add_argument('--pikaurl', type=str, default='amqp://orson:orson@localhost:8001/%2F', help='rabbitmq url')
+    asyncio.run(main(parser.parse_args()))

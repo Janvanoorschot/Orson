@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import argparse
+import flask
+from flask_wtf.csrf import CSRFProtect
+from flask_sock import Sock
+import orson
+import orson.view
+from orson.view import RoomKeeper, keeper, MessageQueue, mq
+
+# discover paths
+scriptpath = os.path.dirname(__file__)
+modpath = os.path.abspath(os.path.join(scriptpath, os.pardir))
+os.chdir(modpath)
+sys.path.append(modpath)
+
+mq: MessageQueue
+
+
+def callback(type, message):
+    if type == 'room':
+        # this is an announcement, send it up to the webserver
+        orson.view.keeper.announcement(message)
+
+
+def main(args):
+    import orson.view
+    orson.view.app = flask.Flask(__name__,
+                            static_url_path='/static',
+                            static_folder=os.path.join(modpath, 'web/static'),
+                            template_folder=os.path.join(modpath, 'web/templates')
+                                 )
+    orson.view.app.secret_key = 'my_secret_key'
+    orson.view.csrf = CSRFProtect(orson.view.app)
+    orson.view.jwks = []
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        orson.view.sock = Sock(orson.view.app)
+
+    # create the room-keeper
+    orson.view.keeper = RoomKeeper()
+
+    # start the message-queue
+    orson.view.mq = MessageQueue(args.pikaurl)
+    orson.view.mq.init(callback)
+
+    # import the rest calls (in order) and run
+    import orson.view.root
+    import orson.view.websocket
+    orson.view.app.run(
+        host=args.host,
+        port=args.port,
+        debug=True,
+        use_reloader=False,
+    )
+
+
+if __name__ == "__main__":
+    # get commandline parameters and mix everything
+    parser = argparse.ArgumentParser(description='Mork calling Orson.')
+    parser.add_argument("--host", type=str, default=os.environ.get("HOST", "0.0.0.0"), help="host address")
+    parser.add_argument("--port", type=int, default=os.environ.get("PORT", 8008), help="tcp port")
+    parser.add_argument('--pikaurl', type=str, default='amqp://orson:orson@127.0.0.1:8001/%2F', help='rabbitmq url')
+    parser.add_argument("--debug", type=bool, default=False, help="output debugging information")
+
+    main(parser.parse_args())

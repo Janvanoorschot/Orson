@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import argparse
+import datetime
+import uuid
+import pika
+from orson.server import Room
+
+ticks_per_second = 1
+milliseconds_delta = datetime.timedelta(milliseconds=(1000/ticks_per_second))
+
+# discover paths
+scriptpath = os.path.dirname(__file__)
+modpath = os.path.abspath(os.path.join(scriptpath, os.pardir))
+os.chdir(modpath)
+sys.path.append(modpath)
+
+# pika
+connection: pika.BlockingConnection
+room: Room
+
+
+def timer():
+    global connection, room
+    now = datetime.datetime.now()
+    next_ping = (now + milliseconds_delta)
+    room.timer(now)
+    sleep_seconds = (next_ping - datetime.datetime.now())/datetime.timedelta(seconds=1)
+    if sleep_seconds > 0:
+        connection.call_later(sleep_seconds, timer)
+    else:
+        connection.call_later(0, timer)
+
+
+def main(args):
+    global connection, room
+    # prepare pika
+    parameters = pika.URLParameters(args.pikaurl)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    channel.basic_qos(prefetch_count=1)
+    # create our main component
+    room = Room(args.name)
+    room.init(connection, channel)
+    # time handling
+    now = datetime.datetime.now()
+    delta = datetime.timedelta(seconds=1)
+    next_second = (now + delta).replace(microsecond=0)
+    wait_seconds = (next_second - now)
+    connection.call_later(wait_seconds/datetime.timedelta(seconds=1), timer)
+    # start the loop
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        channel.stop_consuming()
+    connection.close()
+
+
+if __name__ == "__main__":
+    # get commandline parameters and mix everything
+    parser = argparse.ArgumentParser(description='Mork calling Orson.')
+    parser.add_argument('--pikaurl', type=str, default='amqp://orson:orson@127.0.0.1:8001/%2F', help='rabbitmq url')
+    # parser.add_argument('--name', type=str, default=f'room-{uuid.uuid4()}', help='rabbitmq url')
+    parser.add_argument('--name', type=str, default=f'room', help='rabbitmq url')
+    parser.add_argument("--debug", type=bool, default=False, help="output debugging information")
+
+    main(parser.parse_args())
