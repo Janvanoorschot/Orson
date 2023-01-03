@@ -1,7 +1,7 @@
 # Framework
 Flask
 
-# Get jinja-partials from
+# Templates
 Jinja2
 
 # add CSRF protection
@@ -10,5 +10,9 @@ Flask-WTF
 ## websocket for flask2
 flask-sock
 
-# Pika: sync and async
+# Pika: RabbitMQ connect
 pika
+
+# testing/tools
+pytest
+black
