@@ -16,3 +16,6 @@ pika
 # testing/tools
 pytest
 black
+
+# documentation
+sphinx
