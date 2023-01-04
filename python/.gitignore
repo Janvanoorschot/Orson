@@ -2,6 +2,10 @@
 venv
 
 #sphinx stuff
+docs/build
 _build
 _static
 _templates
+
+# Keep empty directories
+!/**/.gitkeep
