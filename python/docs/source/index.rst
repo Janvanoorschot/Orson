@@ -1,14 +1,17 @@
-.. Orson documentation master file, created by
-   sphinx-quickstart on Wed Jan  4 11:09:14 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Orson documentation master file.
 
-Welcome to Orson's documentation!
-=================================
+Orson/Python documentation
+==========================
+
+**Orson** is a demonstration of a distributed, dynamic web application using python. It uses
+websockets and a message broker to combine browser, webserver and backend processes.
+
+.. note::
+
+   This project is under active development.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   usage
 
 
 
