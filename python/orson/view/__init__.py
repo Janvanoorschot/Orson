@@ -22,7 +22,7 @@ def create_app(config=None):
                 template_folder=templates_path
                 )
     if config is not None:
-        app.config.from_pyfile(config)
+        app.config.from_mapping(config)
     else:
         app.config.from_object(Default)
 
@@ -30,7 +30,7 @@ def create_app(config=None):
     orson.view.keeper = RoomKeeper()
 
     # start the message-queue
-    orson.view.mq = MessageQueue('amqp://orson:orson@127.0.0.1:8001/%2F')
+    orson.view.mq = MessageQueue(app.config['PIKA_URL'])
     orson.view.mq.init(callback)
 
     # attach the websocket
