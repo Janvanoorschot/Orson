@@ -1,2 +1,7 @@
 # Python development
 venv
+
+#sphinx stuff
+_build
+_static
+_templates
