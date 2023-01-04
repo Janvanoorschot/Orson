@@ -1,28 +1,30 @@
 import os
-from flask import render_template, send_from_directory, Flask, session
-from . import app, keeper
+from flask import render_template, send_from_directory, session, Blueprint
+from . import keeper
 import uuid
+route_blueprint = Blueprint('route_blueprint', __name__)
 
 
-@app.before_request
+@route_blueprint.before_request
 def do_before_request():
     if 'user' not in session:
         session['user'] = {}
         session['user']['id'] = uuid.uuid4()
 
-@app.route('/favicon.ico')
+
+@route_blueprint.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, '../web/static'),
+    return send_from_directory(os.path.join(route_blueprint.root_path, '../web/static'),
                                './img/favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
-@app.route('/')
+@route_blueprint.route('/')
 def front_page():
     map = {}
     return render_template("front.html", **map)
 
 
-@app.route('/content')
+@route_blueprint.route('/content')
 def content():
     html = """
     <div>
@@ -34,7 +36,7 @@ def content():
     return html
 
 
-@app.route('/rooms')
+@route_blueprint.route('/rooms')
 def rooms():
     rooms = keeper.get_rooms()
     lines = []

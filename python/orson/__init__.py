@@ -1,4 +1,3 @@
 CHAT_EXCHANGE_NAME = "chat"
 UPDATES_EXCHANGE_NAME = "updates"
-
 ROOM_ANNOUNCEMENT = "room"
