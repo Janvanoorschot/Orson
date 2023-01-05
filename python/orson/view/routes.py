@@ -12,6 +12,11 @@ def do_before_request():
         session['user']['id'] = uuid.uuid4()
 
 
+@route_blueprint.route('/hello')
+def hello():
+    return 'Hello, World!'
+
+
 @route_blueprint.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(route_blueprint.root_path, '../web/static'),

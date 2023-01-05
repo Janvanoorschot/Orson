@@ -21,10 +21,9 @@ def create_app(config=None):
                 static_folder=static_path,
                 template_folder=templates_path
                 )
+    app.config.from_object(Default)
     if config is not None:
         app.config.from_mapping(config)
-    else:
-        app.config.from_object(Default)
 
     # create the room-keeper
     orson.view.keeper = RoomKeeper()
@@ -59,6 +58,10 @@ def create_app(config=None):
     app.register_blueprint(route_blueprint)
 
     return app
+
+def close_app():
+    orson.view.mq.close()
+    pass
 
 connection = None
 sock = None

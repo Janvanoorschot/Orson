@@ -30,10 +30,19 @@ class MessageQueue(object):
         self.channel.queue_bind(
             exchange=UPDATES_EXCHANGE_NAME, queue=self.announcement_queue_name, routing_key=ROOM_ANNOUNCEMENT)
         self.channel.basic_consume(
-            queue=self.announcement_queue_name, on_message_callback=self.announcement, auto_ack=True)
+            queue=self.announcement_queue_name,
+            on_message_callback=self.announcement,
+            auto_ack=True
+        )
         #
         self.thread = Thread(target=self.channel.start_consuming)
         self.thread.start()
+
+    def close(self):
+        self.channel.stop_consuming()
+        self.channel.cancel()
+        self.channel.close()
+        self.connection.close()
 
     def announcement(self, ch, method, properties, body):
         message = json.loads(body)
