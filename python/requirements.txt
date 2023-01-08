@@ -12,6 +12,7 @@ flask-sock
 
 # Pika: RabbitMQ connect
 pika
+aio_pika
 
 # testing/tools
 pytest

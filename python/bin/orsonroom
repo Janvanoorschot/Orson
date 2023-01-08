@@ -4,12 +4,12 @@ import sys
 import os
 import argparse
 import datetime
-import uuid
-import pika
+
+import asyncio
+import aio_pika
+
 from orson.server import Room
 
-ticks_per_second = 1
-milliseconds_delta = datetime.timedelta(milliseconds=(1000/ticks_per_second))
 
 # discover paths
 scriptpath = os.path.dirname(__file__)
@@ -17,46 +17,37 @@ modpath = os.path.abspath(os.path.join(scriptpath, os.pardir))
 os.chdir(modpath)
 sys.path.append(modpath)
 
-# pika
-connection: pika.BlockingConnection
-room: Room
+ticks_per_second = 1.0
+timer = None
+room: Room = None
 
 
-def timer():
-    global connection, room
-    now = datetime.datetime.now()
-    next_ping = (now + milliseconds_delta)
-    room.timer(now)
-    sleep_seconds = (next_ping - datetime.datetime.now())/datetime.timedelta(seconds=1)
-    if sleep_seconds > 0:
-        connection.call_later(sleep_seconds, timer)
-    else:
-        connection.call_later(0, timer)
+async def timer_job():
+    global timer, room
+    await room.timer(datetime.datetime.now())
+    timer = asyncio.get_event_loop().call_later(ticks_per_second, lambda: asyncio.ensure_future(timer_job()))
 
 
-def main(args):
-    global connection, room
-    # prepare pika
-    parameters = pika.URLParameters(args.pikaurl)
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-    channel.basic_qos(prefetch_count=1)
-    # create our main component
+async def main(args) -> None:
+    global timer, room
+    # prepare broker connection
+    connection = await aio_pika.connect_robust(args.pikaurl)
+    channel = await connection.channel()
+    await channel.set_qos(prefetch_count=1)
+
+    # create room
     room = Room(args.name)
     room.init(connection, channel)
-    # time handling
-    now = datetime.datetime.now()
-    delta = datetime.timedelta(seconds=1)
-    next_second = (now + delta).replace(microsecond=0)
-    wait_seconds = (next_second - now)
-    connection.call_later(wait_seconds/datetime.timedelta(seconds=1), timer)
-    # start the loop
-    try:
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        channel.stop_consuming()
-    connection.close()
 
+    # start a timer
+    timer = asyncio.get_event_loop().call_later(ticks_per_second, lambda: asyncio.ensure_future(timer_job()))
+
+    # wait until terminate
+    try:
+        await asyncio.Future()
+    finally:
+        timer.cancel()
+        await connection.close()
 
 if __name__ == "__main__":
     # get commandline parameters and mix everything
@@ -66,4 +57,4 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, default=f'room', help='rabbitmq url')
     parser.add_argument("--debug", type=bool, default=False, help="output debugging information")
 
-    main(parser.parse_args())
+    asyncio.run(main(parser.parse_args()))
