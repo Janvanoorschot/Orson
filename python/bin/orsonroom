@@ -18,8 +18,8 @@ os.chdir(modpath)
 sys.path.append(modpath)
 
 ticks_per_second = 1.0
-timer = None
-room: Room = None
+timer: asyncio.TimerHandle
+room: Room
 
 
 async def timer_job():
@@ -37,7 +37,7 @@ async def main(args) -> None:
 
     # create room
     room = Room(args.name)
-    room.init(connection, channel)
+    await room.init(connection, channel)
 
     # start a timer
     timer = asyncio.get_event_loop().call_later(ticks_per_second, lambda: asyncio.ensure_future(timer_job()))

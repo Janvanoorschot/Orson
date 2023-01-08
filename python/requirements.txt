@@ -1,5 +1,5 @@
 # Framework
-Flask
+flask[async]
 
 # Templates
 Jinja2
@@ -12,7 +12,6 @@ flask-sock
 
 # Pika: RabbitMQ connect
 pika
-aio_pika
 
 # testing/tools
 pytest
