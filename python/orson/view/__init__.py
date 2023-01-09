@@ -69,7 +69,3 @@ def create_app(config=None):
     app.register_blueprint(route_blueprint)
 
     return app
-
-def close_app():
-    pass
-

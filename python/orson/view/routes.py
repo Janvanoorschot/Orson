@@ -19,8 +19,8 @@ def hello():
 
 @route_blueprint.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(route_blueprint.root_path, '../web/static'),
-                               './img/favicon.ico', mimetype='image/vnd.microsoft.icon')
+    static_path = os.path.join(route_blueprint.root_path, '../../web/static')
+    return send_from_directory(static_path,'./img/favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
 @route_blueprint.route('/')
