@@ -1,6 +1,6 @@
 import os
-from flask import render_template, send_from_directory, session, Blueprint
-from . import keeper
+from flask import render_template, send_from_directory, session, Blueprint, request
+from . import keeper, csrf
 import uuid
 route_blueprint = Blueprint('route_blueprint', __name__)
 
@@ -48,3 +48,13 @@ def rooms():
     for id, name in rooms.items():
         lines.append(f"""<li id="{id}" class="list-group-item">{name}</li>""")
     return f'''<ul class="list-group">\n{" ".join(lines)}\n</ul>'''
+
+
+@route_blueprint.route('/alert', methods=['POST'])
+@csrf.exempt
+def alert():
+    message = request.get_json(silent=True)
+    keeper.announcement(message)
+    return message
+
+

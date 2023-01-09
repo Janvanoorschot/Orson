@@ -1,6 +1,4 @@
 import datetime
-import json
-from . import websockets
 
 
 class RoomKeeper:
@@ -34,16 +32,3 @@ class RoomKeeper:
         t = datetime.datetime.now()
         self.cleanup(t)
         return self.rooms
-
-    def old(self):
-        # first get the websocket
-        for ws in websockets.keys():
-            [queue] = websockets[ws]
-            blob = f"""
-                <div id="notifications">
-                    <ul>
-                        <li>{json.dumps({})}</li>
-                    </ul>
-                </div>
-            """
-            ws.send(blob)

@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import argparse
+import datetime
+
+import asyncio
+import aio_pika
+
+from orson.server import Alert
+
+
+# discover paths
+scriptpath = os.path.dirname(__file__)
+modpath = os.path.abspath(os.path.join(scriptpath, os.pardir))
+os.chdir(modpath)
+sys.path.append(modpath)
+
+ticks_per_second = 1.0
+timer: asyncio.TimerHandle
+alert: Alert
+
+
+async def timer_job():
+    global timer, alert
+    await alert.timer(datetime.datetime.now())
+    timer = asyncio.get_event_loop().call_later(ticks_per_second, lambda: asyncio.ensure_future(timer_job()))
+
+
+async def main(args) -> None:
+    global timer, alert
+    # prepare broker connection
+    connection = await aio_pika.connect_robust(args.pikaurl)
+    channel = await connection.channel()
+    await channel.set_qos(prefetch_count=1)
+
+    # create room
+    alert = Alert(args.url)
+    await alert.init(connection, channel)
+
+    # start a timer
+    timer = asyncio.get_event_loop().call_later(ticks_per_second, lambda: asyncio.ensure_future(timer_job()))
+
+    # wait until terminate
+    try:
+        await asyncio.Future()
+    finally:
+        timer.cancel()
+        await connection.close()
+
+if __name__ == "__main__":
+    # get commandline parameters and mix everything
+    parser = argparse.ArgumentParser(description='Mork calling Orson.')
+    parser.add_argument('--pikaurl', type=str, default='amqp://orson:orson@127.0.0.1:8001/%2F', help='rabbitmq url')
+    parser.add_argument('--url', type=str, default='http://localhost:8008/alert', help='Flask alert entry')
+    # parser.add_argument('--name', type=str, default=f'room-{uuid.uuid4()}', help='rabbitmq url')
+    parser.add_argument('--name', type=str, default=f'room', help='rabbitmq url')
+    parser.add_argument("--debug", type=bool, default=False, help="output debugging information")
+
+    asyncio.run(main(parser.parse_args()))

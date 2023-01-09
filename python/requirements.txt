@@ -12,6 +12,10 @@ flask-sock
 
 # Pika: RabbitMQ connect
 pika
+aio-pika
+
+# Outgoing REST calls
+httpx[http2]
 
 # testing/tools
 pytest

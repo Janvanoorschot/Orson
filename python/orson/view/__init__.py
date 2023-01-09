@@ -1,9 +1,20 @@
 import os
 from flask import Flask
 from .config import Default
-import orson.view
 from flask_sock import Sock
+from flask_wtf.csrf import CSRFProtect
+import orson
 
+
+connection = None
+sock = None
+csrf = None
+jwks = None
+
+websockets = {}
+
+from .roomkeeper import RoomKeeper
+keeper: RoomKeeper
 
 def callback(type, message):
     if type == 'room':
@@ -25,12 +36,12 @@ def create_app(config=None):
     if config is not None:
         app.config.from_mapping(config)
 
+    # enable CSRF protection
+    orson.view.csrf = CSRFProtect(app)
+    orson.view.jwks = []
+
     # create the room-keeper
     orson.view.keeper = RoomKeeper()
-
-    # start the message-queue
-    orson.view.mq = MessageQueue(app.config['PIKA_URL'])
-    orson.view.mq.init(callback)
 
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
@@ -60,19 +71,5 @@ def create_app(config=None):
     return app
 
 def close_app():
-    orson.view.mq.close()
     pass
-
-connection = None
-sock = None
-csrf = None
-jwks = None
-
-websockets = {}
-
-from .mq import MessageQueue
-from .roomkeeper import RoomKeeper
-mq: MessageQueue = None
-keeper: RoomKeeper = None
-
 

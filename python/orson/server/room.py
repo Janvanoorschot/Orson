@@ -39,7 +39,7 @@ class Room:
 
     async def timer(self, t):
         if self.next_t < t:
-            self.next_t = t + timedelta(seconds=24)
+            self.next_t = t + timedelta(seconds=self.interval)
             # broadcast your presence
             message = {
                 "id": self.id,

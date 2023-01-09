@@ -3,7 +3,6 @@
 import sys
 import os
 import argparse
-from flask_wtf.csrf import CSRFProtect
 
 # discover paths
 scriptpath = os.path.dirname(__file__)
@@ -15,8 +14,6 @@ sys.path.append(modpath)
 def main(args):
     import orson.view
     app = orson.view.create_app()
-    orson.view.csrf = CSRFProtect(app)
-    orson.view.jwks = []
 
     app.run(
         host=args.host,
