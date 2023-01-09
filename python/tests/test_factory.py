@@ -1,4 +1,5 @@
 from orson.view import create_app, close_app
+from flask.testing import FlaskClient
 
 
 def test_config():
@@ -8,6 +9,6 @@ def test_config():
     close_app()
 
 
-def xtest_hello(client):
+def test_hello(client: FlaskClient):
     response = client.get('/hello')
     assert response.data == b'Hello, World!'
