@@ -1,8 +1,9 @@
 import os
 from flask import Flask
-from .config import Default
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
+
+from .config import Default
 import orson
 
 
