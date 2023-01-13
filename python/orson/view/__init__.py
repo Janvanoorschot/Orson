@@ -6,16 +6,21 @@ from flask_wtf.csrf import CSRFProtect
 from .config import Default
 import orson
 
+websockets = {}
+
+from .room_keeper import RoomKeeper
+from .client_manager import ClientManager
+
 
 connection = None
 sock = None
 csrf = None
 jwks = None
 
-websockets = {}
 
-from .roomkeeper import RoomKeeper
+
 keeper: RoomKeeper
+manager: ClientManager
 
 
 def create_app(config=None):
@@ -38,6 +43,7 @@ def create_app(config=None):
 
     # create the room-keeper
     orson.view.keeper = RoomKeeper()
+    orson.view.manager = ClientManager()
 
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
@@ -51,8 +57,8 @@ def create_app(config=None):
         websockets[ws] = [queue]
         while True:
             try:
-                command = queue.get(timeout=1)
-                ws.send(command)
+                html_blob = queue.get(timeout=1)
+                ws.send(html_blob)
             except Empty:
                 pass
             except ConnectionClosed:

@@ -1,4 +1,5 @@
 import datetime
+from queue import Queue, Empty
 from . import websockets
 
 
@@ -21,13 +22,13 @@ class RoomKeeper:
         self.lastseen[id] = t
         if self.room_has_changed(id, message):
             self.rooms[id] = name
-            self.cleanup()
-            self.inform_clients()
+            self.cleanup(t)
+            self.inform_clients(message)
 
     def room_has_changed(self, id, message) -> bool:
         if id not in self.rooms:
             return True
-        return False
+        return True
 
     def cleanup(self, t):
         remove = []
@@ -38,10 +39,16 @@ class RoomKeeper:
             del self.rooms[id]
             del self.lastseen[id]
 
-    def inform_clients(self):
-        for socket in websockets:
+    def inform_clients(self, message):
+        for ws, content in websockets.items():
+            queue: Queue = content[0]
+            html_blob = self.format_announcement(message)
+            queue.put(html_blob)
 
-        pass
+    def format_announcement(self, message) -> str:
+        val = f"<li>{message['id']}/{message['name']}/{message['t']}</li>"
+        blob = f"<div id=\"notifications\" hx-swap-oob=\"beforeend\">{val}</div>"
+        return blob
 
     def get_rooms(self):
         t = datetime.datetime.now()

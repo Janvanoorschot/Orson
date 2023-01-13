@@ -2,20 +2,23 @@
 {% block title %}Mork calling Orson{% endblock %}
 {% block head %}
     {{ super() }}
-    <link href="{{ url_for('static', filename='./css/front.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/front.css') }}" rel="stylesheet">
 {% endblock %}
 {% block content %}
-<h1>Mork Calling Orson</h1>
+    <h1>Mork Calling Orson</h1>
 
-<p hx-get="/content" hx-trigger="load" class="intro-descr"></p>
+        <p hx-get="/content" hx-trigger="load" class="intro-descr"></p>
 
-<h2>Rooms</h2>
-<p hx-get="/rooms" hx-trigger="load" class="intro-descr"></p>
+    <h2>Rooms</h2>
 
+        <p hx-get="/rooms" hx-trigger="load" class="intro-descr"></p>
 
-<div hx-ext="ws" ws-connect="/ws">
-    <div id="notifications"></div>
-</div>
+    <h2>Messages</h2>
+        <div hx-ext="ws" ws-connect="/ws">
+        </div>
+
+        <ul id="notifications">
+        </ul>
 
 
 {% endblock %}
