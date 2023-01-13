@@ -17,11 +17,6 @@ websockets = {}
 from .roomkeeper import RoomKeeper
 keeper: RoomKeeper
 
-def callback(type, message):
-    if type == 'room':
-        # this is an announcement, send it up to the webserver
-        orson.view.keeper.announcement(message)
-
 
 def create_app(config=None):
     proj_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
