@@ -14,11 +14,11 @@
         <p hx-get="/rooms" hx-trigger="load" class="intro-descr"></p>
 
     <h2>Messages</h2>
-        <div hx-ext="ws" ws-connect="/ws">
+        <div  hx-ext="ws" ws-connect="/ws">
+            <ul id="notifications">
+            </ul>
         </div>
 
-        <ul id="notifications">
-        </ul>
 
 
 {% endblock %}

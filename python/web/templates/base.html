@@ -7,14 +7,14 @@
         <link href="{{ url_for('static', filename='lib/bootstrap.css') }}" rel="stylesheet">
         <link href="{{ url_for('static', filename='lib/mdb.min.css') }}" rel="stylesheet">
         <link href="{{ url_for('static', filename='css/orson.css') }}" rel="stylesheet">
+        <script src="{{ url_for('static', filename='lib/htmx.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='lib/idiomorph-ext.min.js') }}"></script>
         <title id="pagetitle">{% block title %}{% endblock %} - My Webpage</title>
     {% endblock %}
 </head>
 <body class="full-height">
     <div id="content">{% block content %}{% endblock %}</div>
     <div id="footer">
-        <script src="{{ url_for('static', filename='lib/htmx.min.js') }}"></script>
-        <script src="{{ url_for('static', filename='lib/idiomorph.min.js') }}"></script>
         <script src="{{ url_for('static', filename='lib/ws.js') }}"></script>
         <script src="{{ url_for('static', filename='lib/bootstrap.bundle.min.js') }}"></script>
         <script src="{{ url_for('static', filename='js/orson.js') }}"></script>
