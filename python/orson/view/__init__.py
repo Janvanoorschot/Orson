@@ -1,16 +1,19 @@
 import os
-from flask import Flask
+import datetime
+import uuid
+from flask import Flask, session
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
 
 from .config import Default
 import orson
 
+sessions = {}
 websockets = {}
 
 from .room_keeper import RoomKeeper
 from .client_manager import ClientManager
-
+from .client_session import ClientSession
 
 connection = None
 sock = None
@@ -48,6 +51,14 @@ def create_app(config=None):
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         orson.view.sock = Sock(app)
+
+    @app.before_request
+    def do_before_request():
+        if 'client_id' not in session:
+            client_id = str(uuid.uuid4())
+            t = datetime.datetime.now()
+            sessions[client_id] = ClientSession(client_id, t)
+
 
     @orson.view.sock.route('/ws')
     def connect_ws(ws):

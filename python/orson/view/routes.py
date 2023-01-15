@@ -1,15 +1,9 @@
 import os
-from flask import render_template, send_from_directory, session, Blueprint, request
-from . import keeper, csrf
+import datetime
 import uuid
+from flask import render_template, send_from_directory, session, Blueprint, request
+from . import keeper, csrf, ClientSession
 route_blueprint = Blueprint('route_blueprint', __name__)
-
-
-@route_blueprint.before_request
-def do_before_request():
-    if 'user' not in session:
-        session['user'] = {}
-        session['user']['id'] = uuid.uuid4()
 
 
 @route_blueprint.route('/hello')
@@ -43,12 +37,13 @@ def content():
 
 @route_blueprint.route('/rooms')
 def rooms():
-    rooms = keeper.get_rooms()
-    lines = []
-    for id, name in rooms.items():
-        lines.append(f"""<li id="{id}" class="list-group-item">{name}</li>""")
-    return f'''<ul class="list-group">\n{" ".join(lines)}\n</ul>'''
+    return ClientSession.rooms(keeper)
 
+# message from client to server
+
+@route_blueprint.route('/enter_room/<room_id>')
+def enter_room(room_id):
+    return session['session'].enter_room(room_id, keeper)
 
 @route_blueprint.route('/alert', methods=['POST'])
 @csrf.exempt
