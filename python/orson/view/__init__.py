@@ -1,7 +1,7 @@
 import os
 import datetime
 import uuid
-from flask import Flask, session
+from flask import Flask, session, request
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
 
@@ -21,7 +21,6 @@ csrf = None
 jwks = None
 
 
-
 keeper: RoomKeeper
 manager: ClientManager
 
@@ -36,9 +35,11 @@ def create_app(config=None):
                 static_folder=static_path,
                 template_folder=templates_path
                 )
+    # load the defaults from a static Object inside the project
     app.config.from_object(Default)
     if config is not None:
         app.config.from_mapping(config)
+    app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
     # enable CSRF protection
     orson.view.csrf = CSRFProtect(app)
@@ -54,10 +55,15 @@ def create_app(config=None):
 
     @app.before_request
     def do_before_request():
-        if 'client_id' not in session:
-            client_id = str(uuid.uuid4())
-            t = datetime.datetime.now()
-            sessions[client_id] = ClientSession(client_id, t)
+        if 'client_id' not in session or session['client_id'] not in sessions:
+            if not request.url_rule.rule.startswith("/events"):
+                client_id = str(uuid.uuid4())
+                t = datetime.datetime.now()
+                sessions[client_id] = ClientSession(client_id, t)
+                session['client_id'] = client_id
+            else:
+                session['client_id'] = "0"
+            session.modified = True
 
 
     @orson.view.sock.route('/ws')

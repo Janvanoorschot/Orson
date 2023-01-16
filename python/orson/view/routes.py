@@ -2,8 +2,12 @@ import os
 import datetime
 import uuid
 from flask import render_template, send_from_directory, session, Blueprint, request
-from . import keeper, csrf, ClientSession
+from . import keeper, csrf, ClientSession, sessions
 route_blueprint = Blueprint('route_blueprint', __name__)
+
+zero_session = ClientSession("0", datetime.datetime.now())
+sessions["0"] = zero_session
+
 
 
 @route_blueprint.route('/hello')
@@ -11,7 +15,6 @@ def hello():
     return 'Hello, World!'
 
 
-@route_blueprint.route('/favicon.ico')
 def favicon():
     static_path = os.path.join(route_blueprint.root_path, '../../web/static')
     return send_from_directory(static_path,'./img/favicon.ico', mimetype='image/vnd.microsoft.icon')
@@ -40,12 +43,17 @@ def rooms():
     return ClientSession.rooms(keeper)
 
 # message from client to server
-
 @route_blueprint.route('/enter_room/<room_id>')
 def enter_room(room_id):
-    return session['session'].enter_room(room_id, keeper)
+    client_id = session.get('client_id', None)
+    if client_id:
+        return sessions[client_id].enter_room(room_id, keeper)
+    else:
+        return f'''<div id="messages">huh?</div>'''
 
-@route_blueprint.route('/alert', methods=['POST'])
+
+
+@route_blueprint.route('/events/alert', methods=['POST'])
 @csrf.exempt
 def alert():
     message = request.get_json(silent=True)

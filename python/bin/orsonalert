@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # get commandline parameters and mix everything
     parser = argparse.ArgumentParser(description='Mork calling Orson.')
     parser.add_argument('--pikaurl', type=str, default='amqp://orson:orson@127.0.0.1:8001/%2F', help='rabbitmq url')
-    parser.add_argument('--url', type=str, default='http://localhost:8008/alert', help='Flask alert entry')
+    parser.add_argument('--url', type=str, default='http://localhost:8008/events/alert', help='Flask alert entry')
     # parser.add_argument('--name', type=str, default=f'room-{uuid.uuid4()}', help='rabbitmq url')
     parser.add_argument('--name', type=str, default=f'room', help='rabbitmq url')
     parser.add_argument("--debug", type=bool, default=False, help="output debugging information")
