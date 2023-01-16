@@ -12,7 +12,7 @@ sessions = {}
 websockets = {}
 
 from .room_keeper import RoomKeeper
-from .client_manager import ClientManager
+from .client_manager import ClientManager, Client
 from .client_session import ClientSession
 
 connection = None
@@ -41,13 +41,11 @@ def create_app(config=None):
         app.config.from_mapping(config)
     app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
-    # enable CSRF protection
-    orson.view.csrf = CSRFProtect(app)
-    orson.view.jwks = []
-
     # create the room-keeper
     orson.view.keeper = RoomKeeper()
     orson.view.manager = ClientManager()
+
+    sessions["0"] = ClientSession(manager.zero_client(), orson.view.keeper, orson.view.manager)
 
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
@@ -57,14 +55,13 @@ def create_app(config=None):
     def do_before_request():
         if 'client_id' not in session or session['client_id'] not in sessions:
             if not request.url_rule.rule.startswith("/events"):
-                client_id = str(uuid.uuid4())
-                t = datetime.datetime.now()
-                sessions[client_id] = ClientSession(client_id, t)
-                session['client_id'] = client_id
+                # create a new client and session
+                client = manager.create_client()
+                sessions[client.client_id] = ClientSession(client, orson.view.keeper, orson.view.manager)
+                session['client_id'] = client.client_id
             else:
                 session['client_id'] = "0"
             session.modified = True
-
 
     @orson.view.sock.route('/ws')
     def connect_ws(ws):
@@ -86,5 +83,12 @@ def create_app(config=None):
     # attach the 'normal' routes using a blueprint
     from .routes import route_blueprint
     app.register_blueprint(route_blueprint)
+    from .events import event_blueprint
+    app.register_blueprint(event_blueprint)
+
+    # enable CSRF protection
+    orson.view.csrf = CSRFProtect(app)
+    orson.view.jwks = []
+    orson.view.csrf.exempt(event_blueprint)
 
     return app

@@ -1,13 +1,8 @@
 import os
 import datetime
-import uuid
 from flask import render_template, send_from_directory, session, Blueprint, request
-from . import keeper, csrf, ClientSession, sessions
+from . import manager, keeper, csrf, ClientSession, sessions
 route_blueprint = Blueprint('route_blueprint', __name__)
-
-zero_session = ClientSession("0", datetime.datetime.now())
-sessions["0"] = zero_session
-
 
 
 @route_blueprint.route('/hello')
@@ -43,21 +38,10 @@ def rooms():
     return ClientSession.rooms(keeper)
 
 # message from client to server
+
+
 @route_blueprint.route('/enter_room/<room_id>')
 def enter_room(room_id):
-    client_id = session.get('client_id', None)
-    if client_id:
-        return sessions[client_id].enter_room(room_id, keeper)
-    else:
-        return f'''<div id="messages">huh?</div>'''
-
-
-
-@route_blueprint.route('/events/alert', methods=['POST'])
-@csrf.exempt
-def alert():
-    message = request.get_json(silent=True)
-    keeper.announcement(message)
-    return message
+    return sessions[session['client_id']].enter_room(room_id)
 
 
