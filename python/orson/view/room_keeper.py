@@ -1,6 +1,8 @@
+import asyncio
 import datetime
 from queue import Queue, Empty
-from . import websockets
+
+from orson.view import websockets, MessageQueue
 
 
 class RoomKeeper:
@@ -8,11 +10,13 @@ class RoomKeeper:
     rooms: dict
     last_seen: dict
     max_idle_secs: int
+    mq: MessageQueue
 
-    def __init__(self):
+    def __init__(self, mq):
         self.rooms = {}
         self.last_seen = {}
         self.max_idle_secs = 60
+        self.mq = mq
 
     def has_room(self, room_id):
         return room_id in self.rooms
@@ -35,6 +39,14 @@ class RoomKeeper:
             self.rooms[id] = name
             self.cleanup(t)
             self.inform_clients(message)
+
+    def enter_room(self, room_id, client_id):
+        # send an 'enter' message to the room, that is all
+        msg = {
+            'msg': 'enter',
+            'client_id': client_id
+        }
+        self.mq.send(room_id, msg)
 
     def room_has_changed(self, id, message) -> bool:
         if id not in self.rooms:

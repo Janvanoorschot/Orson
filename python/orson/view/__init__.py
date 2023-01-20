@@ -7,23 +7,21 @@ from flask_wtf.csrf import CSRFProtect
 from .config import Default
 import orson
 
+from .message_queue import MessageQueue
 sessions = {}
 websockets = {}
-
-from .room_keeper import RoomKeeper
-from .client_manager import ClientManager, Client
-from .client_session import ClientSession
-from .message_queue import MessageQueue
-
+mq: MessageQueue
 connection = None
 sock = None
 csrf = None
 jwks = None
 
-
+from .room_keeper import RoomKeeper
+from .client_manager import ClientManager, Client
+from .client_session import ClientSession
 keeper: RoomKeeper
 manager: ClientManager
-mq: MessageQueue
+
 
 def create_app(config=None):
     proj_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -47,19 +45,19 @@ def create_app(config=None):
 
     app.secret_key =app.config['SECRET_KEY']
 
-    # create the room-keeper
-    orson.view.keeper = RoomKeeper()
-    orson.view.manager = ClientManager()
-
-    sessions["0"] = ClientSession(manager.zero_client(), orson.view.keeper, orson.view.manager)
-
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         orson.view.sock = Sock(app)
 
     # attach the message queue
-    orson.view.mq = MessageQueue(app.config["PIKA_URL"], app.config["PIKA_EXCHANGE_NAME"])
-    asyncio.run(orson.view.mq.connect())
+    mq = MessageQueue(app.config["PIKA_URL"])
+
+    # create the room-keeper
+    orson.view.keeper = RoomKeeper(mq)
+    orson.view.manager = ClientManager()
+
+    sessions["0"] = ClientSession(manager.zero_client(), orson.view.keeper, orson.view.manager)
+
 
     @app.before_request
     def do_before_request():
