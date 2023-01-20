@@ -1,6 +1,5 @@
 import os
-import datetime
-import uuid
+import asyncio
 from flask import Flask, session, request
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
@@ -14,6 +13,7 @@ websockets = {}
 from .room_keeper import RoomKeeper
 from .client_manager import ClientManager, Client
 from .client_session import ClientSession
+from .message_queue import MessageQueue
 
 connection = None
 sock = None
@@ -23,7 +23,7 @@ jwks = None
 
 keeper: RoomKeeper
 manager: ClientManager
-
+mq: MessageQueue
 
 def create_app(config=None):
     proj_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -35,11 +35,17 @@ def create_app(config=None):
                 static_folder=static_path,
                 template_folder=templates_path
                 )
-    # load the defaults from a static Object inside the project
+    # load the defaults from (in order):
+    #   - a static Object inside the project (the default values)
+    #   - a file (default is dev, optionaly overwritten during production
+    #   - an (optional) argument blob
+    #   - environment variables
     app.config.from_object(Default)
     if config is not None:
         app.config.from_mapping(config)
-    app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
+    app.config.from_prefixed_env()
+
+    app.secret_key =app.config['SECRET_KEY']
 
     # create the room-keeper
     orson.view.keeper = RoomKeeper()
@@ -50,6 +56,10 @@ def create_app(config=None):
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         orson.view.sock = Sock(app)
+
+    # attach the message queue
+    orson.view.mq = MessageQueue(app.config["PIKA_URL"], app.config["PIKA_EXCHANGE_NAME"])
+    asyncio.run(orson.view.mq.connect())
 
     @app.before_request
     def do_before_request():

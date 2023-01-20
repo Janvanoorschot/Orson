@@ -3,6 +3,7 @@
 import sys
 import os
 import argparse
+import json
 
 # discover paths
 scriptpath = os.path.dirname(__file__)
@@ -12,8 +13,14 @@ sys.path.append(modpath)
 
 
 def main(args):
+    if os.path.isfile(args.config):
+        with open(args.config) as f:
+            cfg = json.load(f)
+    else:
+        cfg = None
+
     import orson.view
-    app = orson.view.create_app()
+    app = orson.view.create_app(config=cfg)
 
     app.run(
         host=args.host,
@@ -26,5 +33,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Mork calling Orson.')
     parser.add_argument("--host", type=str, default=os.environ.get("HOST", "0.0.0.0"), help="host address")
     parser.add_argument("--port", type=int, default=os.environ.get("PORT", 8008), help="tcp port")
+    parser.add_argument("--config", type=str, default=os.environ.get("CONFIG", os.path.join(modpath,"bin/config_dev.json")), help="config file")
 
     main(parser.parse_args())
