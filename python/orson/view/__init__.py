@@ -3,6 +3,7 @@ import asyncio
 from flask import Flask, session, request
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
+from celery import Celery
 
 from .config import Default
 import orson
@@ -88,6 +89,11 @@ def create_app(config=None):
         if ws in websockets:
             del websockets[ws]
 
+    # create/attach celery
+    celery = make_celery(app)
+    app.celery = celery
+
+
     # attach the 'normal' routes using a blueprint
     from .routes import route_blueprint
     app.register_blueprint(route_blueprint)
@@ -100,3 +106,19 @@ def create_app(config=None):
     orson.view.csrf.exempt(event_blueprint)
 
     return app
+
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend=app.config['CELERY_RESULT_BACKEND'],
+        broker=app.config['CELERY_BROKER_URL'],
+        include=['orson.view.tasks']
+    )
+    class ContextTask(celery.Task):
+        abstract = True
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+    celery.Task = ContextTask
+    return celery
+

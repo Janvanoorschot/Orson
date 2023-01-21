@@ -10,6 +10,9 @@ Flask-WTF
 ## websocket for flask2
 flask-sock
 
+# Celery: task queue
+celery
+
 # Pika: RabbitMQ connect
 pika
 aio-pika
