@@ -114,11 +114,13 @@ def make_celery(app):
         broker=app.config['CELERY_BROKER_URL'],
         include=['orson.view.tasks']
     )
+
     class ContextTask(celery.Task):
         abstract = True
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 return TaskBase.__call__(self, *args, **kwargs)
+
     celery.Task = ContextTask
     return celery
 

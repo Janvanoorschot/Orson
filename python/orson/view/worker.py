@@ -6,7 +6,7 @@ def make_celery():
         'worker',
         backend="rpc://",
         broker="amqp://orson:orson@127.0.0.1:8001/%2F",
-        include=['orson.view.tasks']
+        include=['orson.tasks']
     )
     return celery
 

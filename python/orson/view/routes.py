@@ -2,6 +2,7 @@ import os
 import datetime
 from flask import render_template, send_from_directory, session, Blueprint, request, current_app
 from . import manager, keeper, csrf, ClientSession, sessions
+
 route_blueprint = Blueprint('route_blueprint', __name__)
 
 
@@ -43,7 +44,7 @@ def rooms():
 @route_blueprint.route('/enter_room/<room_id>')
 def enter_room(room_id):
 
-    result = current_app.celery.send_task("tasks.add_together", args=[6,7])
+    result = current_app.celery.send_task("tasks.publish_message", args=["ha jan"])
     r = result.get()
     return sessions[session['client_id']].enter_room(room_id)
 
