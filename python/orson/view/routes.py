@@ -44,7 +44,7 @@ def rooms():
 @route_blueprint.route('/enter_room/<room_id>')
 def enter_room(room_id):
 
-    result = current_app.celery.send_task("tasks.publish_message", args=["ha jan"])
+    result = current_app.celery.send_task("tasks.publish_message", args=[room_id, "ha jan"])
     r = result.get()
     return sessions[session['client_id']].enter_room(room_id)
 
