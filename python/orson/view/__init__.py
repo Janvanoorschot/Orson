@@ -50,11 +50,8 @@ def create_app(config=None):
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         orson.view.sock = Sock(app)
 
-    # attach the message queue
-    mq = MessageQueue(app.config["PIKA_URL"])
-
     # create the room-keeper
-    orson.view.keeper = RoomKeeper(mq)
+    orson.view.keeper = RoomKeeper()
     orson.view.manager = ClientManager()
 
     sessions["0"] = ClientSession(manager.zero_client(), orson.view.keeper, orson.view.manager)
