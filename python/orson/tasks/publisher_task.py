@@ -40,4 +40,3 @@ def publish_message(self, room_id, message):
         routing_key=room_id,
         properties=pika.BasicProperties(content_type='application/json')
     )
-    pass

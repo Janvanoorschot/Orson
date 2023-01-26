@@ -20,22 +20,26 @@ class Room:
         self.name = name
         self.next_t = datetime.datetime.fromtimestamp(-1)
         self.interval = 10
+        print(f"room[{self.name}]:[{self.id}]")
 
     async def init(self, connection, channel):
         self.connection = connection
         self.channel = channel
-        # create ingress/egress exchanges for this room
-        self.chat_exchange = await self.channel.declare_exchange(CHAT_EXCHANGE_NAME, 'topic')
-        self.updates_exchange = await self.channel.declare_exchange(UPDATES_EXCHANGE_NAME, 'topic')
-        # create queue to the ingress exchange
-        queue = await self.channel.declare_queue('', exclusive=True)
-        self.chat_queue_name = queue.name
-        binding_key = f"{self.name}"
-        await queue.bind(self.chat_exchange, binding_key)
-        await queue.consume(self.chatter, no_ack=True)
+        async with self.connection:
+            self.chat_exchange = await self.channel.declare_exchange(CHAT_EXCHANGE_NAME, 'topic')
+            self.updates_exchange = await self.channel.declare_exchange(UPDATES_EXCHANGE_NAME, 'topic')
+            # create queue to the ingress exchange
+            queue = await self.channel.declare_queue('', exclusive=True)
+            self.chat_queue_name = queue.name
+            binding_key = f"{self.id}"
+            await queue.bind(self.chat_exchange, binding_key)
+            async with queue.iterator() as queue_iter:
+                async for message in queue_iter:
+                    async with message.process():
+                        print(message.body)
 
     async def chatter(self, ch, method, properties, body):
-        pass
+        print(f"message: {json.dumps(body)}")
 
     async def timer(self, t):
         if self.next_t < t:
