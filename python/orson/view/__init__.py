@@ -109,7 +109,7 @@ def make_celery(app):
         app.import_name,
         backend=app.config['CELERY_RESULT_BACKEND'],
         broker=app.config['CELERY_BROKER_URL'],
-        include=['orson.view.tasks']
+        include=['orson.tasks']
     )
     celery.conf.update(app.config["CELERY_CONFIG"])
 
