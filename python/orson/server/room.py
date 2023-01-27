@@ -20,6 +20,7 @@ class Room:
         self.name = name
         self.next_t = datetime.datetime.fromtimestamp(-1)
         self.interval = 10
+        self.clients = {}
         print(f"room[{self.name}]:[{self.id}]")
 
     async def init(self, connection, channel):
@@ -36,10 +37,16 @@ class Room:
             async with queue.iterator() as queue_iter:
                 async for message in queue_iter:
                     async with message.process():
-                        print(message.body)
+                        body = message.body.decode('UTF-8')
+                        msg = json.loads(body)
+                        await self.chatter(msg)
 
-    async def chatter(self, ch, method, properties, body):
-        print(f"message: {json.dumps(body)}")
+    async def chatter(self, msg):
+        if 'client_id' in msg:
+            client_id = msg['client_id']
+            if client_id not in self.clients:
+                self.clients[client_id] = 0
+            self.clients[client_id] = self.clients[client_id] + 1
 
     async def timer(self, t):
         if self.next_t < t:
@@ -48,7 +55,8 @@ class Room:
             message = {
                 "id": self.id,
                 "name": self.name,
-                "t": t.isoformat()
+                "t": t.isoformat(),
+                "clients": self.clients
             }
             await self.updates_exchange.publish(
                 aio_pika.Message(body=json.dumps(message).encode()),

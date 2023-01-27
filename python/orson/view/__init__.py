@@ -111,6 +111,7 @@ def make_celery(app):
         broker=app.config['CELERY_BROKER_URL'],
         include=['orson.view.tasks']
     )
+    celery.conf.update(app.config["CELERY_CONFIG"])
 
     class ContextTask(celery.Task):
         abstract = True
