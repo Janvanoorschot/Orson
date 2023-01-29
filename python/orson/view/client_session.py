@@ -1,4 +1,5 @@
 import datetime
+from flask import render_template
 from . import Client, ClientManager, RoomKeeper
 
 
@@ -14,13 +15,20 @@ class ClientSession:
         self.manager = manager
 
     @classmethod
-    def rooms(cls, keeper):
+    def old_rooms(cls, keeper):
         rooms = keeper.get_rooms()
         lines = []
         for room_id, name in rooms.items():
             url = f"/enter_room/{room_id}"
             lines.append(f'''<div hx-get="{url}" hx-trigger="click" hx-target="#debugging" class="list-group-item list-group-item-action">{name}</div>''')
         return f'''<ul class="list-group">\n{" ".join(lines)}\n</ul>'''
+
+    @classmethod
+    def rooms(cls, keeper):
+        map = {
+            'rooms': keeper.get_rooms()
+        }
+        return render_template("rooms.html", **map)
 
     def enter_room(self, room_id):
         if self.keeper.has_room(room_id):

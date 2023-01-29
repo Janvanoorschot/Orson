@@ -34,9 +34,12 @@ class PikaPublisher(Task):
 
 @shared_task(name="tasks.publish_message", base=PikaPublisher, bind=True)
 def publish_message(self, room_id, message):
-    self.channel.basic_publish(
-        exchange=CHAT_EXCHANGE_NAME,
-        body=json.dumps(message),
-        routing_key=room_id,
-        properties=pika.BasicProperties(content_type='application/json')
-    )
+    try:
+        self.channel.basic_publish(
+            exchange=CHAT_EXCHANGE_NAME,
+            body=json.dumps(message),
+            routing_key=room_id,
+            properties=pika.BasicProperties(content_type='application/json')
+        )
+    except Exception as e:
+        print("error in worker when publishing")

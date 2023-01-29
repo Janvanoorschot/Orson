@@ -1,0 +1,10 @@
+<ul class="list-group">
+    {% for room_id, name in rooms | dictsort %}
+        <div hx-get="/enter_room/{{ room_id }}"
+             hx-trigger="click"
+             hx-target="#debugging"
+             class="list-group-item list-group-item-action">
+            {{ name }}
+        </div>
+    {% endfor %}
+</ul>
