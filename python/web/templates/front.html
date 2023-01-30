@@ -17,12 +17,11 @@
 
         <p hx-get="/rooms" hx-trigger="load" class="intro-descr"></p>
 
-    <h2>Messages</h2>
-        <div  hx-ext="ws" ws-connect="/ws">
-            <ul id="notifications">
+    <h2>Rooms Matrix</h2>
+        <div  hx-ext="ws" ws-connect="/ws"  hx-swap-oob="innerHTML">
+            <ul id="rooms_matrix" >
             </ul>
         </div>
-
 
 
 {% endblock %}

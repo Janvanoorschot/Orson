@@ -1,0 +1,10 @@
+<div id="rooms_matrix" hx-swap-oob="innerHTML">
+    {% for room_id, room in rooms | dictsort %}
+        <div class="row">
+            <div class="col" id="{{ room.room_id }}">{{ room.name }}</div>
+            {% for client_id, client in room.clients | dictsort %}
+                <div class="col" id="{{ client_id }}">{{ client.name }}</div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>

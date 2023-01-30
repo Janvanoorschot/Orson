@@ -24,7 +24,7 @@ class ClientSession:
     def enter_room(self, room_id):
         if self.keeper.has_room(room_id):
             room = self.keeper.get_room(room_id)
-            self.keeper.enter_room(room_id, self.client.client_id)
+            self.keeper.enter_room(room, self.client)
             return f'''<div id="messages">Entering room {room}</div>'''
         else:
             return f'''<div id="messages">Trying to enter unknown room {room_id}</div>'''

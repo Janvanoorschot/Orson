@@ -17,8 +17,8 @@ sock = None
 csrf = None
 jwks = None
 
-from .room_keeper import RoomKeeper
 from .client_manager import ClientManager, Client
+from .room_keeper import RoomKeeper
 from .client_session import ClientSession
 keeper: RoomKeeper
 manager: ClientManager

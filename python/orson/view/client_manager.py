@@ -14,12 +14,16 @@ EVT_LEFTROOM = 3
 
 class Client:
 
+    client_id: str
+    name: str
+    created_at: datetime
     state: int
     room: str
     target_room: str
 
-    def __init__(self, client_id):
+    def __init__(self, client_id, name):
         self.client_id = client_id
+        self.name = name
         self.created_at = datetime.datetime.now()
         self.state = STATE_NOWHERE
         self.room = None
@@ -38,13 +42,19 @@ class ClientManager:
 
     def __init__(self):
         self.clients = {}
-        self.zero = Client("0")
+        self.zero = Client("0", "client_0")
 
-    def zero_client(self):
+    def has_client(self, client_id) -> bool:
+        return client_id in self.clients
+
+    def get_client(self, client_id) -> Client:
+        return self.clients.get(client_id, None)
+
+    def zero_client(self) -> Client:
         return self.zero
 
     def create_client(self) -> Client:
         client_id = str(uuid.uuid4())
-        self.clients[client_id] = Client(client_id)
+        client_name = f"client[{len(self.clients)}]"
+        self.clients[client_id] = Client(client_id, client_name)
         return self.clients[client_id]
-
