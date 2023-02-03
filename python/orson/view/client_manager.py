@@ -72,3 +72,14 @@ class ClientManager:
     def event(self, evt: int, client):
         pass
 
+    ######################################################################################
+    # Event functions called by other entities
+    def evt_room_has_new_client(self, room, client_id):
+        pass
+
+    def evt_room_has_lost_client(self, room, client_id):
+        pass
+
+    def evt_room_lost(self, room):
+        pass
+
