@@ -54,7 +54,7 @@ def create_app(config=None):
     orson.view.keeper = RoomKeeper()
     orson.view.manager = ClientManager()
 
-    sessions["0"] = ClientSession(manager.zero_client(), orson.view.keeper, orson.view.manager)
+    sessions["0"] = ClientSession(manager.zero_client())
 
 
     @app.before_request
@@ -63,7 +63,7 @@ def create_app(config=None):
             if not request.url_rule.rule.startswith("/events"):
                 # create a new client and session
                 client = manager.create_client()
-                sessions[client.client_id] = ClientSession(client, orson.view.keeper, orson.view.manager)
+                sessions[client.client_id] = ClientSession(client)
                 session['client_id'] = client.client_id
             else:
                 session['client_id'] = "0"
@@ -112,13 +112,12 @@ def make_celery(app):
         include=['orson.tasks']
     )
     celery.config_from_object('orson.tasks.config')
-
-    class ContextTask(celery.Task):
+    TaskBase = celery.Task
+    class ContextTask(TaskBase):
         abstract = True
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 return TaskBase.__call__(self, *args, **kwargs)
-
     celery.Task = ContextTask
     return celery
 

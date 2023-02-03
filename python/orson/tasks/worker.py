@@ -1,3 +1,4 @@
+# celery  -A orson.tasks.worker worker --loglevel=INFO --without-heartbeat --without-gossip --without-mingle
 from celery import Celery
 from .config import Default
 

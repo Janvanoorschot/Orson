@@ -1,7 +1,14 @@
-<div id="rooms_matrix" hx-swap-oob="innerHTML">
+<div id="rooms_matrix">
     {% for room_id, room in rooms | dictsort %}
         <div class="row">
-            <div class="col" id="{{ room.room_id }}">{{ room.name }}</div>
+            <div class="col"
+                 hx-get="/enter_room/{{ room_id }}"
+                 hx-trigger="click"
+                 hx-target="#debugging"
+                 id="{{ room.room_id }}"
+                 >
+                {{ room.name }}
+            </div>
             {% for client_id, client in room.clients | dictsort %}
                 <div class="col" id="{{ client_id }}">{{ client.name }}</div>
             {% endfor %}

@@ -1,4 +1,4 @@
-from flask import current_app, render_template
+from flask import render_template
 import datetime
 from queue import Queue
 from . import ClientManager
@@ -54,14 +54,6 @@ class RoomKeeper:
         t = datetime.datetime.now()
         self.cleanup(t)
         return self.rooms
-
-    def enter_room(self, room, client):
-        # send an 'enter' message to the room, that is all.
-        msg = {
-            'msg': 'enter',
-            'client_id': client.client_id
-        }
-        current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
 
     def announcement(self, manager: ClientManager, message: dict):
         # announcement from a room

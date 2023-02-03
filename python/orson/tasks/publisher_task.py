@@ -12,7 +12,7 @@ LOGGER = logging.getLogger(__name__)
 class PikaPublisher(Task):
 
     EXCHANGE_TYPE: str = "topic"
-    URL: str = "amqp://orson:orson@127.0.0.1:8001/%2F?heartbeat=10"
+    URL: str = "amqp://orson:orson@127.0.0.1:8001/%2F?heartbeat=600&blocked_connection_timeout=300"
     QUEUE_NAME: ""
 
     def run(self, *args, **kwargs):
@@ -45,13 +45,17 @@ def publish_message(self, room_id, message):
     is_send = False
     while not is_send:
         try:
-            self.channel.basic_publish(
-                exchange=CHAT_EXCHANGE_NAME,
-                body=json.dumps(message),
-                routing_key=room_id,
-                properties=pika.BasicProperties(content_type='application/json')
-            )
-            is_send = True
+            if self.channel.is_open:
+                self.channel.basic_publish(
+                    exchange=CHAT_EXCHANGE_NAME,
+                    body=json.dumps(message),
+                    routing_key=room_id,
+                    properties=pika.BasicProperties(content_type='application/json')
+                )
+                is_send = True
+            else:
+                self.close()
+                self.connect()
         except Exception as sle:
             self.close()
             self.connect()

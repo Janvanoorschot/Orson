@@ -7,21 +7,17 @@
 {% block content %}
     <h1>Mork Calling Orson</h1>
 
-        <p hx-get="/content" hx-trigger="load" class="intro-descr"></p>
-
-    <div id="debugging">
-
-    </div>
-
-    <h2>Rooms</h2>
-
-        <p hx-get="/rooms" hx-trigger="load" class="intro-descr"></p>
+        <p id="content" hx-get="/content" hx-trigger="load"></p>
 
     <h2>Rooms Matrix</h2>
-        <div  hx-ext="ws" ws-connect="/ws"  hx-swap-oob="innerHTML">
-            <ul id="rooms_matrix" >
-            </ul>
-        </div>
+    <div  hx-ext="ws" ws-connect="/ws"  hx-swap-oob="innerHTML">
+        <div id="rooms_matrix" hx-get="/rooms" hx-trigger="load"></div>
+    </div>
+
+    <h2>Debugging info</h2>
+    <div id="debugging">
+    </div>
+
 
 
 {% endblock %}

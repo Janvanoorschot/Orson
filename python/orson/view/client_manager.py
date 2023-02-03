@@ -1,3 +1,4 @@
+from flask import current_app
 import uuid
 import datetime
 
@@ -6,10 +7,11 @@ STATE_ROOMSELECTED = 1
 STATE_INROOM = 2
 STATE_LEAVINGROOM = 3
 
-EVT_SELECTROOM = 0
-EVT_ENTERROOM = 1
-EVT_LEAVEROOM = 2
-EVT_LEFTROOM = 3
+EVT_REST_EnterRoom = 0
+EVT_REST_LeaveRoom = 1
+EVT_Alert_EnteredRoom = 2
+EVT_Alert_LeftRoom = 3
+EVT_Timer_RoomDisappeared = 4
 
 
 class Client:
@@ -58,3 +60,15 @@ class ClientManager:
         client_name = f"client[{len(self.clients)}]"
         self.clients[client_id] = Client(client_id, client_name)
         return self.clients[client_id]
+
+    def enter_room(self, client, room):
+        # send an 'enter' message to the room, that is all.
+        msg = {
+            'msg': 'enter',
+            'client_id': client.client_id
+        }
+        current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
+
+    def event(self, evt: int, client):
+        pass
+

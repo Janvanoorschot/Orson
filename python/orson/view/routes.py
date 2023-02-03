@@ -36,13 +36,17 @@ def content():
 
 @route_blueprint.route('/rooms')
 def rooms():
-    return ClientSession.rooms(keeper)
-
-# message from client to server
+    map = {
+        'rooms': keeper.get_rooms()
+    }
+    return render_template("rooms_matrix.html", **map)
 
 
 @route_blueprint.route('/enter_room/<room_id>')
 def enter_room(room_id):
-    return sessions[session['client_id']].enter_room(room_id)
-
-
+    if keeper.has_room(room_id):
+        room = keeper.get_room(room_id)
+        manager.enter_room(sessions[session['client_id']].client, room)
+        return f'''<div id="messages">Entering room {room.name}</div>'''
+    else:
+        return f'''<div id="messages">Trying to enter unknown room {room_id}</div>'''
