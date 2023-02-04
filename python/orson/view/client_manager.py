@@ -83,10 +83,11 @@ class ClientManager:
         }
         current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
 
-    def leave_room(self, client):
+    def leave_room(self, client:Client):
         # send an 'leave' message to the room, that is all.
         msg = {
-            'msg': 'enter',
+            'msg': 'leave',
             'client_id': client.client_id
         }
-        current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
+        if client.in_room():
+            current_app.celery.send_task("tasks.publish_message", args=[client.room.room_id, msg])
