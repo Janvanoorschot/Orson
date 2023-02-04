@@ -31,6 +31,9 @@ class Client:
         self.room = None
         self.target_room = None
 
+    def in_room(self):
+        return self.state == STATE_INROOM
+
     def handle_event(self, event):
         pass
 
@@ -61,17 +64,6 @@ class ClientManager:
         self.clients[client_id] = Client(client_id, client_name)
         return self.clients[client_id]
 
-    def enter_room(self, client, room):
-        # send an 'enter' message to the room, that is all.
-        msg = {
-            'msg': 'enter',
-            'client_id': client.client_id
-        }
-        current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
-
-    def event(self, evt: int, client):
-        pass
-
     ######################################################################################
     # Event functions called by other entities
     def evt_room_has_new_client(self, room, client_id):
@@ -83,3 +75,18 @@ class ClientManager:
     def evt_room_lost(self, room):
         pass
 
+    def enter_room(self, client, room):
+        # send an 'enter' message to the room, that is all.
+        msg = {
+            'msg': 'enter',
+            'client_id': client.client_id
+        }
+        current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
+
+    def leave_room(self, client):
+        # send an 'leave' message to the room, that is all.
+        msg = {
+            'msg': 'enter',
+            'client_id': client.client_id
+        }
+        current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])

@@ -19,7 +19,7 @@ jwks = None
 
 from .client_manager import ClientManager, Client
 from .room_keeper import RoomKeeper
-from .client_session import ClientSession
+from .client_session import ClientSession, Client
 keeper: RoomKeeper
 manager: ClientManager
 

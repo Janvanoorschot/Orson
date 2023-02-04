@@ -1,7 +1,6 @@
 import os
-import datetime
-from flask import render_template, send_from_directory, session, Blueprint, request, current_app
-from . import manager, keeper, csrf, ClientSession, sessions
+from flask import render_template, send_from_directory, session, Blueprint
+from . import Client, manager, keeper, sessions
 
 route_blueprint = Blueprint('route_blueprint', __name__)
 
@@ -50,3 +49,13 @@ def enter_room(room_id):
         return f'''<div id="messages">Entering room {room.name}</div>'''
     else:
         return f'''<div id="messages">Trying to enter unknown room {room_id}</div>'''
+
+@route_blueprint.route('/leave_room')
+def leave_room(room_id):
+    client: Client = sessions[session['client_id']].client
+    if client.in_room():
+        manager.leave_room(client)
+        return f'''<div id="messages">Leaving room</div>'''
+    else:
+        return f'''<div id="messages">Failed to leave room</div>'''
+

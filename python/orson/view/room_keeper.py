@@ -63,7 +63,6 @@ class RoomKeeper:
 
     def get_rooms(self) -> dict:
         t = datetime.datetime.now()
-        self.cleanup(t)
         return self.rooms
 
     def announcement(self, manager: ClientManager, message: dict):
