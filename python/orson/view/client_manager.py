@@ -2,6 +2,9 @@ from flask import current_app
 import uuid
 import datetime
 
+from . import RemoteRoom, Client, ClientManager
+
+
 STATE_NOWHERE = 0
 STATE_ROOMSELECTED = 1
 STATE_INROOM = 2
@@ -14,14 +17,14 @@ EVT_Alert_LeftRoom = 3
 EVT_Timer_RoomDisappeared = 4
 
 
-class Client:
+class ClientImpl(Client):
 
     client_id: str
     name: str
     created_at: datetime
     state: int
-    room: "RemoteRoom"
-    target_room: "RemoteRoom"
+    room: RemoteRoom
+    target_room: RemoteRoom
 
     def __init__(self, client_id, name):
         self.client_id = client_id
@@ -44,7 +47,7 @@ class Client:
         pass
 
 
-class ClientManager:
+class ClientManagerImpl(ClientManager):
 
     clients: dict
 

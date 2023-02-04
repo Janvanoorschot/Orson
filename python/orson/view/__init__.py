@@ -1,5 +1,5 @@
 import os
-import asyncio
+from abc import abstractmethod, ABC
 from flask import Flask, session, request
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
@@ -9,6 +9,53 @@ from .config import Default
 import orson
 
 from .message_queue import MessageQueue
+
+
+class RemoteRoom(ABC):
+
+    @abstractmethod
+    def get_clients(self):
+        pass
+class RoomKeeper(ABC):
+
+    @abstractmethod
+    def get_room(self, room_id: str) -> RemoteRoom:
+        pass
+
+class Client(ABC):
+
+    @abstractmethod
+    def qrs(self):
+        pass
+
+class ClientManager(ABC):
+
+    @abstractmethod
+    def zero_client(self):
+        pass
+
+    @abstractmethod
+    def create_client(self):
+        pass
+
+    @abstractmethod
+    def get_client(self, client_id: str):
+        pass
+
+    @abstractmethod
+    def evt_room_has_lost_client(self, room, client_id):
+        pass
+
+    @abstractmethod
+    def evt_room_lost(self, room):
+        pass
+
+
+from .client_session import ClientSession, Client
+
+
+keeper: RoomKeeper
+manager: ClientManager
 sessions = {}
 websockets = {}
 mq: MessageQueue
@@ -16,12 +63,6 @@ connection = None
 sock = None
 csrf = None
 jwks = None
-
-from .client_manager import ClientManager, Client
-from .room_keeper import RoomKeeper, RemoteRoom
-from .client_session import ClientSession, Client
-keeper: RoomKeeper
-manager: ClientManager
 
 
 def create_app(config=None):
@@ -51,8 +92,10 @@ def create_app(config=None):
         orson.view.sock = Sock(app)
 
     # create the room-keeper
-    orson.view.keeper = RoomKeeper()
-    orson.view.manager = ClientManager()
+    import client_manager
+    import room_keeper
+    orson.view.keeper = room_keeper.RoomKeeperImpl()
+    orson.view.manager = client_manager.ClientManagerImpl()
 
     sessions["0"] = ClientSession(manager.zero_client())
 

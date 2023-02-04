@@ -3,10 +3,10 @@ import datetime
 from queue import Queue
 
 from orson.view import websockets
-from . import ClientManager
+from . import RemoteRoom, RoomKeeper, ClientManager
 
 
-class RemoteRoom:
+class RemoteRoomImpl(RemoteRoom):
     room_id: str
     name: str
     last_seen: datetime
@@ -18,6 +18,9 @@ class RemoteRoom:
         self.last_seen = t
         self.clients = {}
 
+    def get_clients(self):
+        return self.clients
+
     def has_clients(self, client_ids):
         # check if the client lists are the same
         if len(client_ids) != len(self.clients):
@@ -28,7 +31,7 @@ class RemoteRoom:
         return True
 
 
-class RoomKeeper:
+class RoomKeeperImpl(RoomKeeper):
 
     rooms: dict
     last_seen: dict
@@ -46,7 +49,6 @@ class RoomKeeper:
         return self.rooms.get(room_id, None)
 
     def get_rooms(self) -> dict:
-        t = datetime.datetime.now()
         return self.rooms
 
     def update_clients(self, manager, room, client_ids):
@@ -79,7 +81,7 @@ class RoomKeeper:
         self.cleanup(manager, t)
         # update room info
         if is_new:
-            room = RemoteRoom(room_id, room_name, t)
+            room = RemoteRoomImpl(room_id, room_name, t)
             self.rooms[room_id] = room
         else:
             room = self.rooms[room_id]
@@ -105,7 +107,7 @@ class RoomKeeper:
         for room_id in remove:
             # inform the client_manager about the lost clients
             room = self.get_room(room_id)
-            for client_id, client in room.clients.items():
+            for client_id, client in room.get_clients().items():
                 manager.evt_room_has_lost_client(room, client_id)
             manager.evt_room_lost(room)
             # remove the room from our inventory
@@ -120,7 +122,9 @@ class RoomKeeper:
 
     def format_announcement(self, t, is_new) -> str:
         # send the complete rooms/clients matrix back
-        map = {
+        m = {
+            't': t,
             'rooms': self.rooms,
+            'is_new': is_new
         }
-        return render_template("rooms_matrix.html", **map)
+        return render_template("rooms_matrix.html", **m)
