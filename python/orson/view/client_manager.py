@@ -20,13 +20,16 @@ class Client:
     name: str
     created_at: datetime
     state: int
-    room: str
-    target_room: str
+    room: "RemoteRoom"
+    target_room: "RemoteRoom"
 
     def __init__(self, client_id, name):
         self.client_id = client_id
         self.name = name
         self.created_at = datetime.datetime.now()
+        self.reset()
+
+    def reset(self):
         self.state = STATE_NOWHERE
         self.room = None
         self.target_room = None
@@ -64,27 +67,42 @@ class ClientManager:
         self.clients[client_id] = Client(client_id, client_name)
         return self.clients[client_id]
 
+    def event(self, evt, client, *args):
+        pass
+
     ######################################################################################
     # Event functions called by other entities
     def evt_room_has_new_client(self, room, client_id):
-        pass
+        # the client has entered the room
+        if self.get_client(client_id):
+            self.event(EVT_Alert_EnteredRoom, self.get_client(client_id), room)
 
     def evt_room_has_lost_client(self, room, client_id):
-        pass
+        # the client has left the room
+        if self.get_client(client_id):
+            self.event(EVT_Alert_LeftRoom, self.get_client(client_id), room)
 
     def evt_room_lost(self, room):
-        pass
+        # a room has been blasted from space
+        for client_id, client in self.clients.items():
+            if client.room == room or client.target_room == room:
+                self.event(EVT_Timer_RoomDisappeared, self.get_client(client_id), room)
+                client.reset()
 
     def enter_room(self, client, room):
-        # send an 'enter' message to the room, that is all.
+        # client requests to enter a room
+        self.event(EVT_REST_EnterRoom, client, room)
+        # send an 'enter' message to the room
         msg = {
             'msg': 'enter',
             'client_id': client.client_id
         }
         current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
 
-    def leave_room(self, client:Client):
-        # send an 'leave' message to the room, that is all.
+    def leave_room(self, client: Client):
+        # client requests to leave a room
+        self.event(EVT_REST_EnterRoom, client)
+        # send a 'leave' message to the room
         msg = {
             'msg': 'leave',
             'client_id': client.client_id

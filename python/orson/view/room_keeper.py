@@ -1,9 +1,9 @@
 from flask import render_template
 import datetime
 from queue import Queue
-from . import ClientManager
 
 from orson.view import websockets
+from . import ClientManager
 
 
 class RemoteRoom:
@@ -18,23 +18,6 @@ class RemoteRoom:
         self.last_seen = t
         self.clients = {}
 
-    def update_clients(self, manager: ClientManager, client_ids):
-        """ Update the client-list in this room and inform the client_manager about changes """
-        for client_id in client_ids:
-            if client_id not in self.clients:
-                # new client
-                manager.evt_room_has_new_client(self, client_id)
-        for client_id in self.clients.keys():
-            if client_id not in client_ids:
-                # lost client
-                manager.evt_room_has_lost_client(self, client_id)
-        # take over the new list of clients
-        self.clients = {}
-        for client_id in client_ids:
-            client = manager.get_client(client_id)
-            if client:
-                self.clients[client.client_id] = client
-
     def has_clients(self, client_ids):
         # check if the client lists are the same
         if len(client_ids) != len(self.clients):
@@ -46,6 +29,7 @@ class RemoteRoom:
 
 
 class RoomKeeper:
+
     rooms: dict
     last_seen: dict
     max_idle_secs: int
@@ -65,16 +49,33 @@ class RoomKeeper:
         t = datetime.datetime.now()
         return self.rooms
 
+    def update_clients(self, manager, room, client_ids):
+        """ Update the client-list in this room and inform the client_manager about changes """
+        for client_id in client_ids:
+            if client_id not in room.clients:
+                # new client
+                manager.evt_room_has_new_client(self, client_id)
+        for client_id in room.clients.keys():
+            if client_id not in client_ids:
+                # lost client
+                manager.evt_room_has_lost_client(self, client_id)
+        # take over the new list of clients
+        room.clients = {}
+        for client_id in client_ids:
+            client = manager.get_client(client_id)
+            if client:
+                room.clients[client.client_id] = client
+
     def announcement(self, manager: ClientManager, message: dict):
         # announcement from a room
         room_id = message.get("id", None)
         room_name = message.get("name", None)
-        clients = message.get("clients", [])
+        client_ids = message.get("clients", [])
         t = datetime.datetime.now()
         self.last_seen[room_id] = t
         # remember room state change
         is_new = self.room_is_new(room_id)
-        has_changed = self.room_has_changed(room_id, clients)
+        has_changed = self.room_has_changed(room_id, client_ids)
         self.cleanup(manager, t)
         # update room info
         if is_new:
@@ -82,7 +83,7 @@ class RoomKeeper:
             self.rooms[room_id] = room
         else:
             room = self.rooms[room_id]
-        room.update_clients(manager, clients)
+        self.update_clients(manager, room, client_ids)
         # now inform clients if needed
         if is_new or has_changed:
             self.inform_clients(t, is_new)
