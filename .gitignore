@@ -1,3 +1,4 @@
 # Intellij stuff
 .idea
+__pycache__
 
