@@ -18,6 +18,9 @@ class RemoteRoomImpl(RemoteRoom):
         self.last_seen = t
         self.clients = {}
 
+    def get_room_id(self):
+        return self.room_id
+
     def get_clients(self):
         return self.clients
 

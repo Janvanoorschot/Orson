@@ -6,13 +6,16 @@ from flask_wtf.csrf import CSRFProtect
 from celery import Celery
 
 from .config import Default
-import orson
+import orson.view
 
 from .message_queue import MessageQueue
 
 
 class RemoteRoom(ABC):
 
+    @abstractmethod
+    def get_room_id(self):
+        pass
     @abstractmethod
     def get_clients(self):
         pass
@@ -25,7 +28,14 @@ class RoomKeeper(ABC):
 class Client(ABC):
 
     @abstractmethod
-    def qrs(self):
+    def get_client_id(self) -> int:
+        pass
+
+    @abstractmethod
+    def in_room(self) -> bool:
+        pass
+
+    def get_room(self) -> RemoteRoom:
         pass
 
 class ClientManager(ABC):
@@ -89,11 +99,12 @@ def create_app(config=None):
 
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        import orson.view
         orson.view.sock = Sock(app)
 
     # create the room-keeper
-    import client_manager
-    import room_keeper
+    import orson.view.client_manager
+    import orson.view.room_keeper
     orson.view.keeper = room_keeper.RoomKeeperImpl()
     orson.view.manager = client_manager.ClientManagerImpl()
 

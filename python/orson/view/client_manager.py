@@ -32,6 +32,15 @@ class ClientImpl(Client):
         self.created_at = datetime.datetime.now()
         self.reset()
 
+    def get_client_id(self):
+        return self.client_id
+
+    def in_room(self):
+        return self.room is not None
+
+    def get_room(self):
+        return self.room
+
     def reset(self):
         self.state = STATE_NOWHERE
         self.room = None
@@ -53,7 +62,7 @@ class ClientManagerImpl(ClientManager):
 
     def __init__(self):
         self.clients = {}
-        self.zero = Client("0", "client_0")
+        self.zero = ClientImpl("0", "client_0")
 
     def has_client(self, client_id) -> bool:
         return client_id in self.clients
@@ -67,10 +76,11 @@ class ClientManagerImpl(ClientManager):
     def create_client(self) -> Client:
         client_id = str(uuid.uuid4())
         client_name = f"client[{len(self.clients)}]"
-        self.clients[client_id] = Client(client_id, client_name)
+        self.clients[client_id] = ClientImpl(client_id, client_name)
         return self.clients[client_id]
 
     def event(self, evt, client, *args):
+        print(f"event/{evt}/{client.get_client_id()}")
         pass
 
     ######################################################################################
@@ -108,7 +118,7 @@ class ClientManagerImpl(ClientManager):
         # send a 'leave' message to the room
         msg = {
             'msg': 'leave',
-            'client_id': client.client_id
+            'client_id': client.get_client_id()
         }
         if client.in_room():
-            current_app.celery.send_task("tasks.publish_message", args=[client.room.room_id, msg])
+            current_app.celery.send_task("tasks.publish_message", args=[client.get_room().get_room_id(), msg])

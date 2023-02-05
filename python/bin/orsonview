@@ -19,6 +19,7 @@ def main(args):
     else:
         cfg = None
 
+    import orson
     import orson.view
     app = orson.view.create_app(config=cfg)
 
