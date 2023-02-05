@@ -1,7 +1,9 @@
-from flask import current_app
 import uuid
 import datetime
-
+from queue import Queue
+from flask import render_template, current_app
+from orson.view import websockets
+from orson.view import keeper
 from . import RemoteRoom, Client, ClientManager
 
 
@@ -14,7 +16,7 @@ EVT_REST_EnterRoom = 0
 EVT_REST_LeaveRoom = 1
 EVT_Alert_EnteredRoom = 2
 EVT_Alert_LeftRoom = 3
-EVT_Timer_RoomDisappeared = 4
+EVT_Alert_RoomDisappeared = 4
 
 
 class ClientImpl(Client):
@@ -49,12 +51,6 @@ class ClientImpl(Client):
     def in_room(self):
         return self.state == STATE_INROOM
 
-    def handle_event(self, event):
-        pass
-
-    def action_something(self):
-        pass
-
 
 class ClientManagerImpl(ClientManager):
 
@@ -79,9 +75,53 @@ class ClientManagerImpl(ClientManager):
         self.clients[client_id] = ClientImpl(client_id, client_name)
         return self.clients[client_id]
 
-    def event(self, evt, client, *args):
-        print(f"event/{evt}/{client.get_client_id()}")
-        pass
+    def event(self, evt: int, client: Client, *args):
+        """ Simple state machine handling client movements"""
+        if client.state == STATE_NOWHERE:
+            if evt == EVT_REST_EnterRoom:
+                """ entering a room """
+                client.state = STATE_ROOMSELECTED
+                client.room = None
+                client.target_room = args[0]
+                self.inform_clients()
+        elif client.state == STATE_ROOMSELECTED:
+            if evt == EVT_Alert_EnteredRoom:
+                """ now in room """
+                client.state = STATE_INROOM
+                client.room = client.target_room
+                client.target_room = None
+                self.inform_clients()
+        elif client.state == STATE_INROOM:
+            if evt == EVT_REST_LeaveRoom:
+                """ leaving room """
+                client.state = STATE_LEAVINGROOM
+                client.target_room = None
+                self.inform_clients()
+            elif evt == EVT_Alert_LeftRoom:
+                """ unexpected sudden departure (room gone?) """
+                client.reset()
+                self.inform_clients()
+        elif client.state == STATE_LEAVINGROOM:
+            if evt == EVT_Alert_LeftRoom:
+                """ left  room """
+                client.state = STATE_INROOM
+                client.room = client.target_room
+                client.target_room = None
+                self.inform_clients()
+
+    def inform_clients(self):
+        html_blob = self.format_announcement()
+        for ws, content in websockets.items():
+            queue: Queue = content[0]
+            queue.put(html_blob)
+
+    def format_announcement(self) -> str:
+        # send the complete rooms/clients matrix back
+        m = {
+            'rooms': keeper.rooms
+        }
+        return render_template("rooms_matrix.html", **m)
+
 
     ######################################################################################
     # Event functions called by other entities
@@ -99,7 +139,7 @@ class ClientManagerImpl(ClientManager):
         # a room has been blasted from space
         for client_id, client in self.clients.items():
             if client.room == room or client.target_room == room:
-                self.event(EVT_Timer_RoomDisappeared, self.get_client(client_id), room)
+                self.event(EVT_Alert_RoomDisappeared, self.get_client(client_id), room)
                 client.reset()
 
     def enter_room(self, client, room):
@@ -108,13 +148,13 @@ class ClientManagerImpl(ClientManager):
         # send an 'enter' message to the room
         msg = {
             'msg': 'enter',
-            'client_id': client.client_id
+            'client_id': client.get_client_id()
         }
-        current_app.celery.send_task("tasks.publish_message", args=[room.room_id, msg])
+        current_app.celery.send_task("tasks.publish_message", args=[room.get_room_id(), msg])
 
     def leave_room(self, client: Client):
         # client requests to leave a room
-        self.event(EVT_REST_EnterRoom, client)
+        self.event(EVT_REST_LeaveRoom, client)
         # send a 'leave' message to the room
         msg = {
             'msg': 'leave',

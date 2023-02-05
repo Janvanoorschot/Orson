@@ -1,8 +1,4 @@
-from flask import render_template
 import datetime
-from queue import Queue
-
-from orson.view import websockets
 from . import RemoteRoom, RoomKeeper, ClientManager
 
 
@@ -66,10 +62,13 @@ class RoomKeeperImpl(RoomKeeper):
                 manager.evt_room_has_lost_client(self, client_id)
         # take over the new list of clients
         room.clients = {}
+
+
         for client_id in client_ids:
             client = manager.get_client(client_id)
-            if client:
-                room.clients[client.client_id] = client
+            if client is not None:
+                print("here")
+                room.clients[client.get_client_id()] = client
 
     def announcement(self, manager: ClientManager, message: dict):
         # announcement from a room
@@ -89,9 +88,6 @@ class RoomKeeperImpl(RoomKeeper):
         else:
             room = self.rooms[room_id]
         self.update_clients(manager, room, client_ids)
-        # now inform clients if needed
-        if is_new or has_changed:
-            self.inform_clients(t, is_new)
 
     def room_is_new(self, room_id) -> bool:
         return room_id not in self.rooms
@@ -117,17 +113,3 @@ class RoomKeeperImpl(RoomKeeper):
             del self.rooms[room_id]
             del self.last_seen[room_id]
 
-    def inform_clients(self, t, is_new):
-        html_blob = self.format_announcement(t, is_new)
-        for ws, content in websockets.items():
-            queue: Queue = content[0]
-            queue.put(html_blob)
-
-    def format_announcement(self, t, is_new) -> str:
-        # send the complete rooms/clients matrix back
-        m = {
-            't': t,
-            'rooms': self.rooms,
-            'is_new': is_new
-        }
-        return render_template("rooms_matrix.html", **m)

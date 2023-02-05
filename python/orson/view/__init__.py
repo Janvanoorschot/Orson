@@ -20,12 +20,20 @@ class RemoteRoom(ABC):
     def get_clients(self):
         pass
 class RoomKeeper(ABC):
+    rooms: dict = NotImplemented
 
     @abstractmethod
     def get_room(self, room_id: str) -> RemoteRoom:
         pass
 
 class Client(ABC):
+    state: int = NotImplemented
+    room: RemoteRoom = NotImplemented
+    target_room: RemoteRoom = NotImplemented
+
+    @abstractmethod
+    def reset(self):
+        pass
 
     @abstractmethod
     def get_client_id(self) -> int:
@@ -35,6 +43,7 @@ class Client(ABC):
     def in_room(self) -> bool:
         pass
 
+    @abstractmethod
     def get_room(self) -> RemoteRoom:
         pass
 
@@ -57,15 +66,23 @@ class ClientManager(ABC):
         pass
 
     @abstractmethod
-    def evt_room_lost(self, room):
+    def evt_room_lost(self,  room: RemoteRoom):
+        pass
+
+    @abstractmethod
+    def enter_room(self, client: Client,  room: RemoteRoom):
+        pass
+
+    @abstractmethod
+    def leave_room(self, client: Client,  room: RemoteRoom):
         pass
 
 
 from .client_session import ClientSession, Client
 
 
-keeper: RoomKeeper
 manager: ClientManager
+keeper: RoomKeeper
 sessions = {}
 websockets = {}
 mq: MessageQueue
@@ -103,9 +120,9 @@ def create_app(config=None):
         orson.view.sock = Sock(app)
 
     # create the room-keeper
-    import orson.view.client_manager
     import orson.view.room_keeper
     orson.view.keeper = room_keeper.RoomKeeperImpl()
+    import orson.view.client_manager
     orson.view.manager = client_manager.ClientManagerImpl()
 
     sessions["0"] = ClientSession(manager.zero_client())

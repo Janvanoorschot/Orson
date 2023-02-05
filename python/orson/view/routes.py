@@ -44,11 +44,19 @@ def rooms():
 @route_blueprint.route('/enter_room/<room_id>')
 def enter_room(room_id):
     if keeper.has_room(room_id):
+        client: Client = sessions[session['client_id']].client
         room = keeper.get_room(room_id)
-        manager.enter_room(sessions[session['client_id']].client, room)
-        return f'''<div id="messages">Entering room {room.name}</div>'''
+        if not client.in_room():
+            manager.enter_room(client, room)
+            return f'''<div id="messages">Entering room {room.name}</div>'''
+        elif client.room == room:
+            manager.leave_room(client, room)
+            return f'''<div id="messages">Leaving room {room.name}</div>'''
+        else:
+            return f'''<div id="messages">Invalid state to enter room</div>'''
+
     else:
-        return f'''<div id="messages">Trying to enter unknown room {room_id}</div>'''
+        return f'''<div id="messages">Unknown room {room_id}</div>'''
 
 @route_blueprint.route('/leave_room')
 def leave_room(room_id):
