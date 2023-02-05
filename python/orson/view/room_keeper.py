@@ -62,13 +62,12 @@ class RoomKeeperImpl(RoomKeeper):
                 manager.evt_room_has_lost_client(self, client_id)
         # take over the new list of clients
         room.clients = {}
-
-
         for client_id in client_ids:
             client = manager.get_client(client_id)
-            if client is not None:
-                print("here")
-                room.clients[client.get_client_id()] = client
+            if client is None:
+                """ unknown client, should we create one?"""
+                client = manager.create_client(client_id)
+            room.clients[client.get_client_id()] = client
 
     def announcement(self, manager: ClientManager, message: dict):
         # announcement from a room

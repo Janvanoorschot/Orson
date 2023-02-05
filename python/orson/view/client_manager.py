@@ -69,8 +69,7 @@ class ClientManagerImpl(ClientManager):
     def zero_client(self) -> Client:
         return self.zero
 
-    def create_client(self) -> Client:
-        client_id = str(uuid.uuid4())
+    def create_client(self, client_id=str(uuid.uuid4())) -> Client:
         client_name = f"client[{len(self.clients)}]"
         self.clients[client_id] = ClientImpl(client_id, client_name)
         return self.clients[client_id]
@@ -142,7 +141,7 @@ class ClientManagerImpl(ClientManager):
                 self.event(EVT_Alert_RoomDisappeared, self.get_client(client_id), room)
                 client.reset()
 
-    def enter_room(self, client, room):
+    def enter_room(self, client: Client, room: RemoteRoom):
         # client requests to enter a room
         self.event(EVT_REST_EnterRoom, client, room)
         # send an 'enter' message to the room
@@ -152,7 +151,7 @@ class ClientManagerImpl(ClientManager):
         }
         current_app.celery.send_task("tasks.publish_message", args=[room.get_room_id(), msg])
 
-    def leave_room(self, client: Client):
+    def leave_room(self, client: Client, room: RemoteRoom):
         # client requests to leave a room
         self.event(EVT_REST_LeaveRoom, client)
         # send a 'leave' message to the room
