@@ -19,11 +19,25 @@ class RemoteRoom(ABC):
     @abstractmethod
     def get_clients(self):
         pass
+    @abstractmethod
+    def client_enter(self, client):
+        pass
+    @abstractmethod
+    def client_leave(self, client):
+        pass
+
 class RoomKeeper(ABC):
     rooms: dict = NotImplemented
 
     @abstractmethod
     def get_room(self, room_id: str) -> RemoteRoom:
+        pass
+
+    @abstractmethod
+    def has_room(self, room_id: str) -> bool:
+        pass
+
+    def get_rooms(self) -> dict:
         pass
 
 class Client(ABC):
@@ -41,6 +55,10 @@ class Client(ABC):
 
     @abstractmethod
     def in_room(self) -> bool:
+        pass
+
+    @abstractmethod
+    def is_nowhere(self) -> bool:
         pass
 
     @abstractmethod

@@ -38,7 +38,10 @@ class ClientImpl(Client):
         return self.client_id
 
     def in_room(self):
-        return self.room is not None
+        return self.state == STATE_INROOM
+
+    def is_nowhere(self):
+        return self.state == STATE_NOWHERE
 
     def get_room(self):
         return self.room
@@ -47,9 +50,6 @@ class ClientImpl(Client):
         self.state = STATE_NOWHERE
         self.room = None
         self.target_room = None
-
-    def in_room(self):
-        return self.state == STATE_INROOM
 
 
 class ClientManagerImpl(ClientManager):
@@ -79,33 +79,38 @@ class ClientManagerImpl(ClientManager):
         if client.state == STATE_NOWHERE:
             if evt == EVT_REST_EnterRoom:
                 """ entering a room """
+                room = args[0]
                 client.state = STATE_ROOMSELECTED
                 client.room = None
-                client.target_room = args[0]
-                self.inform_clients()
+                client.target_room = room
         elif client.state == STATE_ROOMSELECTED:
             if evt == EVT_Alert_EnteredRoom:
                 """ now in room """
+                room = args[0]
                 client.state = STATE_INROOM
-                client.room = client.target_room
+                client.room = room
                 client.target_room = None
+                room.client_enter(client)
                 self.inform_clients()
         elif client.state == STATE_INROOM:
             if evt == EVT_REST_LeaveRoom:
                 """ leaving room """
                 client.state = STATE_LEAVINGROOM
                 client.target_room = None
-                self.inform_clients()
             elif evt == EVT_Alert_LeftRoom:
                 """ unexpected sudden departure (room gone?) """
+                room = args[0]
+                room.client_leave(client)
                 client.reset()
                 self.inform_clients()
         elif client.state == STATE_LEAVINGROOM:
             if evt == EVT_Alert_LeftRoom:
                 """ left  room """
-                client.state = STATE_INROOM
-                client.room = client.target_room
+                room = args[0]
+                client.state = STATE_NOWHERE
+                client.room = None
                 client.target_room = None
+                room.client_leave(client)
                 self.inform_clients()
 
     def inform_clients(self):
@@ -137,8 +142,9 @@ class ClientManagerImpl(ClientManager):
     def evt_room_lost(self, room):
         # a room has been blasted from space
         for client_id, client in self.clients.items():
+            if client.room == room:
+                self.event(EVT_Alert_LeftRoom, self.get_client(client_id), room)
             if client.room == room or client.target_room == room:
-                self.event(EVT_Alert_RoomDisappeared, self.get_client(client_id), room)
                 client.reset()
 
     def enter_room(self, client: Client, room: RemoteRoom):
@@ -151,13 +157,15 @@ class ClientManagerImpl(ClientManager):
         }
         current_app.celery.send_task("tasks.publish_message", args=[room.get_room_id(), msg])
 
-    def leave_room(self, client: Client, room: RemoteRoom):
+    def leave_room(self, client: Client):
         # client requests to leave a room
-        self.event(EVT_REST_LeaveRoom, client)
-        # send a 'leave' message to the room
-        msg = {
-            'msg': 'leave',
-            'client_id': client.get_client_id()
-        }
         if client.in_room():
+            # send a 'leave' message to the room
+            msg = {
+                'msg': 'leave',
+                'client_id': client.get_client_id()
+            }
             current_app.celery.send_task("tasks.publish_message", args=[client.get_room().get_room_id(), msg])
+            # update local state
+            self.event(EVT_REST_LeaveRoom, client)
+

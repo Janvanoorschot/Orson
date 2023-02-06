@@ -1,5 +1,6 @@
 import datetime
-from . import RemoteRoom, RoomKeeper, ClientManager
+from flask import current_app
+from . import RemoteRoom, RoomKeeper, ClientManager, Client
 
 
 class RemoteRoomImpl(RemoteRoom):
@@ -20,15 +21,13 @@ class RemoteRoomImpl(RemoteRoom):
     def get_clients(self):
         return self.clients
 
-    def has_clients(self, client_ids):
-        # check if the client lists are the same
-        if len(client_ids) != len(self.clients):
-            return False
-        for client_id in client_ids:
-            if client_id not in self.clients:
-                return False
-        return True
+    def client_enter(self, client: Client):
+        if client.get_client_id() not in self.clients:
+            self.clients[client.get_client_id()] = client
 
+    def client_leave(self, client: Client):
+        if client.get_client_id() in self.clients:
+            del self.clients[client.get_client_id()]
 
 class RoomKeeperImpl(RoomKeeper):
 
@@ -50,25 +49,6 @@ class RoomKeeperImpl(RoomKeeper):
     def get_rooms(self) -> dict:
         return self.rooms
 
-    def update_clients(self, manager, room, client_ids):
-        """ Update the client-list in this room and inform the client_manager about changes """
-        for client_id in client_ids:
-            if client_id not in room.clients:
-                # new client
-                manager.evt_room_has_new_client(self, client_id)
-        for client_id in room.clients.keys():
-            if client_id not in client_ids:
-                # lost client
-                manager.evt_room_has_lost_client(self, client_id)
-        # take over the new list of clients
-        room.clients = {}
-        for client_id in client_ids:
-            client = manager.get_client(client_id)
-            if client is None:
-                """ unknown client, should we create one?"""
-                client = manager.create_client(client_id)
-            room.clients[client.get_client_id()] = client
-
     def announcement(self, manager: ClientManager, message: dict):
         # announcement from a room
         room_id = message.get("id", None)
@@ -78,7 +58,6 @@ class RoomKeeperImpl(RoomKeeper):
         self.last_seen[room_id] = t
         # remember room state change
         is_new = self.room_is_new(room_id)
-        has_changed = self.room_has_changed(room_id, client_ids)
         self.cleanup(manager, t)
         # update room info
         if is_new:
@@ -87,15 +66,29 @@ class RoomKeeperImpl(RoomKeeper):
         else:
             room = self.rooms[room_id]
         self.update_clients(manager, room, client_ids)
+        self.inform_room(room)
+
+    def update_clients(self, manager, room, client_ids):
+        """ Update the client-list in this room and inform the client_manager about changes """
+        for client_id in client_ids:
+            if client_id not in room.clients:
+                # new client
+                manager.evt_room_has_new_client(room, client_id)
+        for client_id in room.clients.keys():
+            if client_id not in client_ids:
+                # lost client
+                manager.evt_room_has_lost_client(room, client_id)
+        # take over the new list of clients
+        room.clients = {}
+        for client_id in client_ids:
+            client = manager.get_client(client_id)
+            if client is None:
+                """ unknown client, should we create one?"""
+                client = manager.create_client(client_id)
+            room.clients[client.get_client_id()] = client
 
     def room_is_new(self, room_id) -> bool:
         return room_id not in self.rooms
-
-    def room_has_changed(self, room_id, clients) -> bool:
-        if self.room_is_new(room_id):
-            return True
-        room = self.rooms[room_id]
-        return not room.has_clients(clients)
 
     def cleanup(self, manager: ClientManager, t: datetime):
         remove = []
@@ -111,4 +104,12 @@ class RoomKeeperImpl(RoomKeeper):
             # remove the room from our inventory
             del self.rooms[room_id]
             del self.last_seen[room_id]
+
+    def inform_room(self, room: RemoteRoom):
+        """ send client-heartbeat message to the room"""
+        msg = {
+            'msg': 'update',
+            'client_ids': [client_id for client_id in room.get_clients()]
+        }
+        current_app.celery.send_task("tasks.publish_message", args=[room.get_room_id(), msg])
 

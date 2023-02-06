@@ -46,11 +46,11 @@ def enter_room(room_id):
     if keeper.has_room(room_id):
         client: Client = sessions[session['client_id']].client
         room = keeper.get_room(room_id)
-        if not client.in_room():
+        if client.is_nowhere():
             manager.enter_room(client, room)
             return f'''<div id="messages">Entering room {room.name}</div>'''
-        elif client.room == room:
-            manager.leave_room(client, room)
+        elif client.in_room():
+            manager.leave_room(client)
             return f'''<div id="messages">Leaving room {room.name}</div>'''
         else:
             return f'''<div id="messages">Invalid state to enter room</div>'''
