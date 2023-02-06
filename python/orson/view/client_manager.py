@@ -100,8 +100,10 @@ class ClientManagerImpl(ClientManager):
             elif evt == EVT_Alert_LeftRoom:
                 """ unexpected sudden departure (room gone?) """
                 room = args[0]
+                client.state = STATE_NOWHERE
+                client.room = None
+                client.target_room = None
                 room.client_leave(client)
-                client.reset()
                 self.inform_clients()
         elif client.state == STATE_LEAVINGROOM:
             if evt == EVT_Alert_LeftRoom:
