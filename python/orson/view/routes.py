@@ -1,5 +1,5 @@
 import os
-from flask import render_template, send_from_directory, session, Blueprint
+from flask import render_template, send_from_directory, session, Blueprint, request
 from . import Client, manager, keeper, sessions
 
 route_blueprint = Blueprint('route_blueprint', __name__)
@@ -10,6 +10,7 @@ def hello():
     return 'Hello, World!'
 
 
+@route_blueprint.route('/favicon.ico')
 def favicon():
     static_path = os.path.join(route_blueprint.root_path, '../../web/static')
     return send_from_directory(static_path,'./img/favicon.ico', mimetype='image/vnd.microsoft.icon')
@@ -35,10 +36,16 @@ def content():
 
 @route_blueprint.route('/rooms')
 def rooms():
-    map = {
-        'rooms': keeper.get_rooms()
-    }
-    return render_template("rooms_matrix.html", **map)
+    if request.args.get('json',None) is None:
+        map = {
+            'rooms': keeper.get_rooms()
+        }
+        return render_template("rooms_matrix.html", **map)
+    else:
+        result = []
+        for room_id, room in keeper.get_rooms().items():
+            result.append({"room_id": room.get_room_id(), "room_name": room.get_room_name()})
+        return result
 
 
 @route_blueprint.route('/enter_room/<room_id>')

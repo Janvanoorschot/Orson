@@ -4,7 +4,7 @@ from queue import Queue
 from flask import render_template, current_app
 from orson.view import websockets
 from orson.view import keeper
-from . import RemoteRoom, Client, ClientManager
+from . import RemoteRoom, Client, ClientManager, Caller
 
 
 STATE_NOWHERE = 0
@@ -54,9 +54,11 @@ class ClientImpl(Client):
 
 class ClientManagerImpl(ClientManager):
 
+    caller: Caller
     clients: dict
 
-    def __init__(self):
+    def __init__(self, caller: Caller):
+        self.caller = caller
         self.clients = {}
         self.zero = ClientImpl("0", "client_0")
 
@@ -157,7 +159,7 @@ class ClientManagerImpl(ClientManager):
             'msg': 'enter',
             'client_id': client.get_client_id()
         }
-        current_app.celery.send_task("tasks.publish_message", args=[room.get_room_id(), msg])
+        self.caller.send_message(room.get_room_id(), msg)
 
     def leave_room(self, client: Client):
         # client requests to leave a room
@@ -167,7 +169,7 @@ class ClientManagerImpl(ClientManager):
                 'msg': 'leave',
                 'client_id': client.get_client_id()
             }
-            current_app.celery.send_task("tasks.publish_message", args=[client.get_room().get_room_id(), msg])
+            self.caller.send_message(client.get_room().get_room_id(), msg)
             # update local state
             self.event(EVT_REST_LeaveRoom, client)
 

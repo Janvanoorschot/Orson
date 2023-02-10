@@ -6,6 +6,9 @@ class RemoteRoom(ABC):
     def get_room_id(self):
         pass
 
+    def get_room_name(self):
+        pass
+
     @abstractmethod
     def get_clients(self):
         pass
@@ -88,4 +91,11 @@ class ClientManager(ABC):
 
     @abstractmethod
     def leave_room(self, client: Client,  room: RemoteRoom):
+        pass
+
+
+class Caller(ABC):
+
+    @abstractmethod
+    def send_message(self, room_id, msg):
         pass

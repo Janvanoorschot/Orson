@@ -1,5 +1,4 @@
 import os
-from abc import abstractmethod, ABC
 from flask import Flask, session, request
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
@@ -7,11 +6,12 @@ from celery import Celery
 
 from .config import Default
 import orson.view
-from .iface import RemoteRoom, Client, ClientManager, RoomKeeper
+from .iface import RemoteRoom, Client, ClientManager, RoomKeeper, Caller
 from .message_queue import MessageQueue
 from .client_session import ClientSession, Client
 
 
+# sharable components, filled during create-app()
 manager: ClientManager
 keeper: RoomKeeper
 sessions = {}
@@ -42,26 +42,33 @@ def create_app(config=None):
     if config is not None:
         app.config.from_mapping(config)
     app.config.from_prefixed_env()
-
     app.secret_key =app.config['SECRET_KEY']
 
-    # attach the websocket
-    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-        import orson.view
-        orson.view.sock = Sock(app)
+    #
+    if app.testing:
+        from .testing_caller import TestingCaller
+        caller = TestingCaller()
+    else:
+        # create/attach celery
+        from .celery_caller import CeleryCaller
+        celery = make_celery(app)
+        caller = CeleryCaller(celery)
 
-    # create the room-keeper
+
+
+    # create the main components used by the Flask calls to implement functionality
     import orson.view.room_keeper
-    orson.view.keeper = room_keeper.RoomKeeperImpl()
+    orson.view.keeper = room_keeper.RoomKeeperImpl(caller)
     import orson.view.client_manager
-    orson.view.manager = client_manager.ClientManagerImpl()
+    orson.view.manager = client_manager.ClientManagerImpl(caller)
 
     sessions["0"] = ClientSession(manager.zero_client())
 
     @app.before_request
     def do_before_request():
         if 'client_id' not in session or session['client_id'] not in sessions:
-            if not request.url_rule.rule.startswith("/events"):
+            path = request.path
+            if not path.startswith("/events"):
                 # create a new client and session
                 client = manager.create_client()
                 sessions[client.client_id] = ClientSession(client)
@@ -69,6 +76,11 @@ def create_app(config=None):
             else:
                 session['client_id'] = "0"
             session.modified = True
+
+    # attach the websocket
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        import orson.view
+        orson.view.sock = Sock(app)
 
     @orson.view.sock.route('/ws')
     def connect_ws(ws):
@@ -87,20 +99,17 @@ def create_app(config=None):
         if ws in websockets:
             del websockets[ws]
 
-    # create/attach celery
-    celery = make_celery(app)
-    app.celery = celery
-
     # attach the 'normal' routes using a blueprint
     from .routes import route_blueprint
     app.register_blueprint(route_blueprint)
     from .events import event_blueprint
     app.register_blueprint(event_blueprint)
 
-    # enable CSRF protection
-    orson.view.csrf = CSRFProtect(app)
-    orson.view.jwks = []
-    orson.view.csrf.exempt(event_blueprint)
+    if not app.testing:
+        # enable CSRF protection
+        orson.view.csrf = CSRFProtect(app)
+        orson.view.jwks = []
+        orson.view.csrf.exempt(event_blueprint)
 
     return app
 

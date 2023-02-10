@@ -1,6 +1,5 @@
 import datetime
-from flask import current_app
-from . import RemoteRoom, RoomKeeper, ClientManager, Client
+from . import RemoteRoom, RoomKeeper, ClientManager, Client, Caller
 
 
 class RemoteRoomImpl(RemoteRoom):
@@ -18,6 +17,9 @@ class RemoteRoomImpl(RemoteRoom):
     def get_room_id(self):
         return self.room_id
 
+    def get_room_name(self):
+        return self.name
+
     def get_clients(self):
         return self.clients
 
@@ -29,13 +31,16 @@ class RemoteRoomImpl(RemoteRoom):
         if client.get_client_id() in self.clients:
             del self.clients[client.get_client_id()]
 
+
 class RoomKeeperImpl(RoomKeeper):
 
+    caller: Caller
     rooms: dict
     last_seen: dict
     max_idle_secs: int
 
-    def __init__(self):
+    def __init__(self, caller: Caller):
+        self.caller = caller
         self.rooms = {}
         self.last_seen = {}
         self.max_idle_secs = 60
@@ -111,5 +116,5 @@ class RoomKeeperImpl(RoomKeeper):
             'msg': 'update',
             'client_ids': [client_id for client_id in room.get_clients()]
         }
-        current_app.celery.send_task("tasks.publish_message", args=[room.get_room_id(), msg])
+        self.caller.send_message(room.get_room_id(), msg)
 
