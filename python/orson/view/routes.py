@@ -48,7 +48,7 @@ def rooms():
         return result
 
 
-@route_blueprint.route('/enter_room/<room_id>')
+@route_blueprint.route('/enter_room/<room_id>', methods=['GET', 'POST'])
 def enter_room(room_id):
     if keeper.has_room(room_id):
         client: Client = sessions[session['client_id']].client
