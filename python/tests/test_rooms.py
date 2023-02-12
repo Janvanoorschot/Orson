@@ -1,4 +1,5 @@
 from flask.testing import FlaskClient
+from flask import session
 
 
 def test_get_json_room(client: FlaskClient):
@@ -28,22 +29,25 @@ def test_create_room(client: FlaskClient):
 
 
 def test_enter_room(client: FlaskClient):
-    # create room
-    msg = {
-        "id": "1234",
-        "name": "room1",
-        "clients": {}
-    }
-    response = client.post(f"/events/alert", json=msg)
-    assert response.status_code == 200
-    # test if the room was detected
-    response = client.get(f'/rooms?json')
-    assert response.status_code == 200
-    # enter this room
-    response = client.post(f"/enter_room/1234")
-    assert response.status_code == 200
-    # test if the client was detected
-    response = client.get(f'/rooms?json')
-    assert response.status_code == 200
+    with client:
+        # create room
+        msg = {
+            "id": "1234",
+            "name": "room1",
+            "clients": {}
+        }
+        response = client.post(f"/events/alert", json=msg)
+        assert response.status_code == 200
+        # clear client_id ( creating room created client_id '0')
+        session['client_id'] = "invalid"
+        # test if the room was detected
+        response = client.get(f'/rooms?json')
+        assert response.status_code == 200
+        # enter this room
+        response = client.post(f"/enter_room/1234")
+        assert response.status_code == 200
+        # test if the client was detected
+        response = client.get(f'/rooms?json')
+        assert response.status_code == 200
 
 
