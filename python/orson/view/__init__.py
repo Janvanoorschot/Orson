@@ -46,8 +46,10 @@ def create_app(config=None):
 
     #
     if app.testing:
+        import tests
         from .testing_caller import TestingCaller
         caller = TestingCaller()
+        tests.caller = caller
     else:
         # create/attach celery
         from .celery_caller import CeleryCaller
