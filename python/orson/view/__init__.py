@@ -12,8 +12,6 @@ from .client_session import ClientSession, Client
 
 
 # sharable components, filled during create-app()
-sessions = {}
-websockets = {}
 mq: MessageQueue
 connection = None
 sock = None
@@ -44,6 +42,8 @@ def create_app(config=None):
 
     # place to store state information
     app.extensions["orson"] = {}
+    app.extensions["orson"]["sessions"] = {}
+    app.extensions["orson"]["websockets"] = {}
 
     #
     if app.testing:
@@ -62,10 +62,11 @@ def create_app(config=None):
     import orson.view.room_keeper
     app.extensions["orson"]["keeper"] = room_keeper.RoomKeeperImpl(app, caller)
 
-    sessions["0"] = ClientSession(app.extensions["orson"]["manager"].zero_client())
+    app.extensions["orson"]["sessions"]["0"] = ClientSession(app.extensions["orson"]["manager"].zero_client())
 
     @app.before_request
     def do_before_request():
+        sessions = current_app.extensions["orson"]["sessions"]
         path = request.path
         if not path.startswith("/events"):
             if 'client_id' not in session or session['client_id']=='0' or session['client_id'] not in sessions:
@@ -87,6 +88,7 @@ def create_app(config=None):
     def connect_ws(ws):
         from queue import Queue, Empty
         from flask_sock import ConnectionClosed
+        websockets = current_app.extensions["orson"]["websockets"]
         queue = Queue()
         websockets[ws] = [queue]
         while True:

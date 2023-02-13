@@ -1,8 +1,7 @@
 import uuid
 import datetime
 from queue import Queue
-from flask import render_template
-from orson.view import websockets
+from flask import render_template, current_app
 from . import RemoteRoom, Client, ClientManager, Caller
 
 
@@ -118,6 +117,7 @@ class ClientManagerImpl(ClientManager):
                 self.inform_clients()
 
     def inform_clients(self):
+        websockets = current_app.extensions["orson"]["websockets"]
         html_blob = self.format_announcement()
         for ws, content in websockets.items():
             queue: Queue = content[0]
