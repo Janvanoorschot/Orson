@@ -84,7 +84,7 @@ class RoomKeeperImpl(RoomKeeper):
             if client_id not in room.clients:
                 # new client
                 self.app.extensions["orson"]["manager"].evt_room_has_new_client(room, client_id)
-        for client_id in room.clients.keys():
+        for client_id in list(room.clients.keys()):
             if client_id not in client_ids:
                 # lost client
                 self.app.extensions["orson"]["manager"].evt_room_has_lost_client(room, client_id)
