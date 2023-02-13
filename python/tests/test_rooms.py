@@ -59,7 +59,7 @@ def test_enter_room(client: FlaskClient):
         json = response.json
         assert isinstance(json, collections.abc.Sequence)
         assert len(json) == 1
-        assert len(json[0]["clients"])  == 1
-        assert json[0]["clients"][0]["client_id"] != "0"
+        assert len(json[0]["clients"]) == 1
+        assert json[0]["clients"][0] != "0"
 
 
