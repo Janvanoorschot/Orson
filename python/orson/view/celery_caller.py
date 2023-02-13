@@ -8,3 +8,7 @@ class CeleryCaller(Caller):
 
     def send_message(self, room_id, msg):
         self.celery.send_task("tasks.publish_message", args=[room_id, msg])
+
+    def get_announcements(self):
+        # dummy in production
+        return {}

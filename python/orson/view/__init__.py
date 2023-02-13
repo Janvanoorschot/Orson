@@ -1,5 +1,5 @@
 import os
-from flask import Flask, session, request
+from flask import Flask, session, request, current_app
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
 from celery import Celery
@@ -12,8 +12,6 @@ from .client_session import ClientSession, Client
 
 
 # sharable components, filled during create-app()
-manager: ClientManager
-keeper: RoomKeeper
 sessions = {}
 websockets = {}
 mq: MessageQueue
@@ -42,42 +40,42 @@ def create_app(config=None):
     if config is not None:
         app.config.from_mapping(config)
     app.config.from_prefixed_env()
-    app.secret_key =app.config['SECRET_KEY']
+    app.secret_key = app.config['SECRET_KEY']
+
+    # place to store state information
+    app.extensions["orson"] = {}
 
     #
     if app.testing:
-        import tests
         from .testing_caller import TestingCaller
         caller = TestingCaller()
-        tests.caller = caller
     else:
         # create/attach celery
         from .celery_caller import CeleryCaller
         celery = make_celery(app)
         caller = CeleryCaller(celery)
 
-
-
     # create the main components used by the Flask calls to implement functionality
-    import orson.view.room_keeper
-    orson.view.keeper = room_keeper.RoomKeeperImpl(caller)
     import orson.view.client_manager
-    orson.view.manager = client_manager.ClientManagerImpl(caller)
+    app.extensions["orson"]["manager"] = client_manager.ClientManagerImpl(app, caller)
+    import orson.view.room_keeper
+    app.extensions["orson"]["keeper"] = room_keeper.RoomKeeperImpl(app, caller)
 
-    sessions["0"] = ClientSession(manager.zero_client())
+    sessions["0"] = ClientSession(app.extensions["orson"]["manager"].zero_client())
 
     @app.before_request
     def do_before_request():
-        if 'client_id' not in session or session['client_id'] not in sessions:
-            path = request.path
-            if not path.startswith("/events"):
+        path = request.path
+        if not path.startswith("/events"):
+            if 'client_id' not in session or session['client_id']=='0' or session['client_id'] not in sessions:
                 # create a new client and session
-                client = manager.create_client()
+                client = current_app.extensions["orson"]["manager"].create_client()
                 sessions[client.client_id] = ClientSession(client)
                 session['client_id'] = client.client_id
-            else:
+                session.modified = True
+        else:
+            if 'client_id' not in session or session['client_id'] not in sessions:
                 session['client_id'] = "0"
-            session.modified = True
 
     # attach the websocket
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':

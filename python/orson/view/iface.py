@@ -99,3 +99,9 @@ class Caller(ABC):
     @abstractmethod
     def send_message(self, room_id, msg):
         pass
+    
+    @abstractmethod
+    def get_announcements(self):
+        pass
+
+

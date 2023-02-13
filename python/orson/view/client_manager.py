@@ -1,9 +1,8 @@
 import uuid
 import datetime
 from queue import Queue
-from flask import render_template, current_app
+from flask import render_template
 from orson.view import websockets
-from orson.view import keeper
 from . import RemoteRoom, Client, ClientManager, Caller
 
 
@@ -57,7 +56,8 @@ class ClientManagerImpl(ClientManager):
     caller: Caller
     clients: dict
 
-    def __init__(self, caller: Caller):
+    def __init__(self, app, caller: Caller):
+        self.app = app
         self.caller = caller
         self.clients = {}
         self.zero = ClientImpl("0", "client_0")
@@ -126,7 +126,7 @@ class ClientManagerImpl(ClientManager):
     def format_announcement(self) -> str:
         # send the complete rooms/clients matrix back
         m = {
-            'rooms': keeper.rooms
+            'rooms': self.app.extensions["orson"]["keeper"].rooms
         }
         return render_template("rooms_matrix.html", **m)
 

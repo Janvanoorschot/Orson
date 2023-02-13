@@ -1,6 +1,6 @@
 import os
-from flask import render_template, send_from_directory, session, Blueprint, request
-from . import Client, manager, keeper, sessions
+from flask import render_template, send_from_directory, session, Blueprint, request, current_app
+from . import Client, sessions
 
 route_blueprint = Blueprint('route_blueprint', __name__)
 
@@ -36,6 +36,8 @@ def content():
 
 @route_blueprint.route('/rooms')
 def rooms():
+    keeper = current_app.extensions["orson"]["keeper"]
+    manager = current_app.extensions["orson"]["manager"]
     if request.args.get('json',None) is None:
         map = {
             'rooms': keeper.get_rooms()
@@ -44,12 +46,19 @@ def rooms():
     else:
         result = []
         for room_id, room in keeper.get_rooms().items():
-            result.append({"room_id": room.get_room_id(), "room_name": room.get_room_name()})
+            result.append(
+                {
+                    "room_id": room.get_room_id(),
+                    "room_name": room.get_room_name(),
+                    "clients": [client_id for client_id in room.get_clients()]
+                })
         return result
 
 
 @route_blueprint.route('/enter_room/<room_id>', methods=['GET', 'POST'])
 def enter_room(room_id):
+    keeper = current_app.extensions["orson"]["keeper"]
+    manager = current_app.extensions["orson"]["manager"]
     if keeper.has_room(room_id):
         client: Client = sessions[session['client_id']].client
         room = keeper.get_room(room_id)
@@ -67,6 +76,8 @@ def enter_room(room_id):
 
 @route_blueprint.route('/leave_room')
 def leave_room(room_id):
+    keeper = current_app.extensions["orson"]["keeper"]
+    manager = current_app.extensions["orson"]["manager"]
     client: Client = sessions[session['client_id']].client
     if client.in_room():
         manager.leave_room(client)
