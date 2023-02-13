@@ -26,3 +26,4 @@ black
 
 # documentation
 sphinx
+myst-parser
