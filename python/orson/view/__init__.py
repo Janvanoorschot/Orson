@@ -12,9 +12,6 @@ from .client_session import ClientSession, Client
 
 
 # sharable components, filled during create-app()
-mq: MessageQueue
-connection = None
-sock = None
 csrf = None
 jwks = None
 
@@ -80,11 +77,13 @@ def create_app(config=None):
                 session['client_id'] = "0"
 
     # attach the websocket
+    sock = None
+
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         import orson.view
-        orson.view.sock = Sock(app)
+        sock = Sock(app)
 
-    @orson.view.sock.route('/ws')
+    @sock.route('/ws')
     def connect_ws(ws):
         from queue import Queue, Empty
         from flask_sock import ConnectionClosed
