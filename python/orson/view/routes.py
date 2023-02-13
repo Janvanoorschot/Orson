@@ -74,6 +74,7 @@ def enter_room(room_id):
     else:
         return f'''<div id="messages">Unknown room {room_id}</div>'''
 
+
 @route_blueprint.route('/leave_room')
 def leave_room(room_id):
     manager = current_app.extensions["orson"]["manager"]

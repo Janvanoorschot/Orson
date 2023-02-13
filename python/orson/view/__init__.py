@@ -11,11 +11,6 @@ from .message_queue import MessageQueue
 from .client_session import ClientSession, Client
 
 
-# sharable components, filled during create-app()
-csrf = None
-jwks = None
-
-
 def create_app(config=None):
     proj_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     static_path = os.path.join(proj_path, 'web/static')
@@ -109,9 +104,8 @@ def create_app(config=None):
 
     if not app.testing:
         # enable CSRF protection
-        orson.view.csrf = CSRFProtect(app)
-        orson.view.jwks = []
-        orson.view.csrf.exempt(event_blueprint)
+        csrf = CSRFProtect(app)
+        csrf.exempt(event_blueprint)
 
     return app
 
