@@ -2,7 +2,7 @@ import os
 from flask import Flask, session, request, current_app
 from flask_sock import Sock
 from flask_wtf.csrf import CSRFProtect
-from celery import Celery
+from celery import Celery, Task
 
 from .config import Default
 import orson.view
@@ -52,7 +52,8 @@ def create_app(config=None):
     else:
         # create/attach celery
         from .celery_caller import CeleryCaller
-        celery = make_celery(app)
+        celery = celery_init_app(app)
+        # celery = make_celery(app)
         caller = CeleryCaller(celery)
 
     # create the main components used by the Flask calls to implement functionality
@@ -114,20 +115,22 @@ def create_app(config=None):
     return app
 
 
-def make_celery(app):
-    celery = Celery(
-        app.import_name,
+def celery_init_app(app: Flask) -> Celery:
+
+    class FlaskTask(Task):
+        def __call__(self, *args: object, **kwargs: object) -> object:
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery_app = Celery(
+        app.name,
+        task_cls=FlaskTask,
         backend=app.config['CELERY_RESULT_BACKEND'],
         broker=app.config['CELERY_BROKER_URL'],
         include=['orson.tasks']
     )
-    celery.config_from_object('orson.tasks.config')
-    TaskBase = celery.Task
-    class ContextTask(TaskBase):
-        abstract = True
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-    celery.Task = ContextTask
-    return celery
-
+    celery_app.config_from_object('orson.tasks.config')
+    # celery_app.config_from_object(app.config["CELERY"])
+    celery_app.set_default()
+    app.extensions["celery"] = celery_app
+    return celery_app
